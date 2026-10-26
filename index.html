@@ -1006,6 +1006,8 @@ body:has(.set-layout) .main,body:has(.wpanes) .main{background:var(--bg-deep)}
 #wbtns .btn{height:34px;font-size:14px;border-color:var(--line2);padding:0 17px;font-family:'Inter',sans-serif}
 
 /* misc */
+.seg2{background:var(--card)}
+.seg2 button.on{background:var(--accent);color:#fff;box-shadow:none}
 .pill.tag-0{background:#3a2d5c;color:#b98cff}.pill.tag-1{background:#1f3d2c;color:#4cc36f}.pill.tag-2{background:#1c304a;color:#5aa9ff}.pill.tag-3{background:#4a2f1b;color:#f39a4b}
 :root[data-theme="light"] .pill.tag-0{background:#f1e8ff;color:#7c3aed}:root[data-theme="light"] .pill.tag-1{background:#e3f6e9;color:#1f8a43}:root[data-theme="light"] .pill.tag-2{background:#e3eefc;color:#0a6fe0}:root[data-theme="light"] .pill.tag-3{background:#fdeedd;color:#b85d14}
 .chat-in .box{min-width:0}
@@ -1933,7 +1935,7 @@ function openSettings() {
     <label class="lbl">Conexión con la IA</label>
     <div class="seg2" id="smode"><button data-v="netlify">Netlify (recomendado)</button><button data-v="direct">Clave directa</button></div>
     <div id="snet"><label class="lbl">Contraseña de la app</label><input class="inp" id="spass" type="password" placeholder="La que pusiste en APP_PASSWORD en Netlify" value="${esc(SETTINGS.password)}"><p class="hint">Tu API key vive en Netlify, no en el navegador.</p></div>
-    <div id="sdir"><label class="lbl">API key de Anthropic</label><input class="inp" id="skey" type="password" placeholder="sk-ant-…" value="${esc(SETTINGS.apiKey)}"><p class="hint">Útil para probar abriendo el archivo en local. Se guarda en este navegador.</p></div>
+    <div id="sdir"><label class="lbl">API key de Anthropic</label><input class="inp" id="skey" type="password" placeholder="sk-ant-…" value="${esc(SETTINGS.apiKey)}"><p class="hint">Para usarla sin servidor (abriendo el archivo o en GitHub Pages). Se guarda solo en este navegador. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Consigue tu API key</a></p></div>
     <label class="lbl">Modelo</label><select class="inp" id="smodel">${MODELS.map(([v, l]) => `<option value="${v}" ${SETTINGS.model === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <div class="row" style="gap:16px;align-items:flex-start"><div class="grow"><label class="lbl">Tu nombre</label><input class="inp" id="sname" value="${esc(SETTINGS.name)}" placeholder="Opcional"></div><div class="grow"><label class="lbl">Velocidad de voz</label><select class="inp" id="srate">${[0.85, 1, 1.15, 1.3].map((r) => `<option ${SETTINGS.rate == r ? 'selected' : ''} value="${r}">${r}x</option>`).join('')}</select></div></div>
     <label class="lbl">Voz en español</label><select class="inp" id="svoice"><option value="">Automática</option>${Speech.list('es-ES').map((v) => `<option ${SETTINGS.voice === v.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
@@ -2040,9 +2042,10 @@ function pageHome(v, _, q) {
     <div class="home-top no-print"><button class="btn btn-sm" id="hist">${ic('clock')} Historial</button></div>
     <div class="home-hero"><div class="hi">${greeting()}</div><h1 class="home-title">${APP_NAME}: tu compañero de estudio IA</h1></div>
     <div class="seg" id="seg"><span class="thumb"></span>${[['study', 'study', 'Estudio'], ['exam', 'exam', 'Exámenes'], ['writing', 'pen', 'Escritura']].map(([k, i, l]) => `<button class="${mode === k ? 'on' : ''}" data-m="${k}">${ic(i)} ${l}</button>`).join('')}</div>
-    <div id="rem" style="max-width:1360px;margin:0 auto">${remindersHTML()}</div>
+    <div id="rem" style="max-width:1360px;margin:0 auto">${!SETTINGS.password && !SETTINGS.apiKey ? `<div class="alert"><div class="grow"><b>Conecta la IA para empezar.</b> <span class="muted">Pon la contraseña de tu Netlify o tu propia API key de Anthropic.</span></div><button class="btn btn-primary btn-sm" id="setup">Configurar</button></div>` : ''}${remindersHTML()}</div>
     <div id="hbody"></div></div>`;
   bindReminders(v);
+  const su = $('#setup', v); if (su) su.onclick = () => openSettings();
   const thumb = () => { const on = $('#seg .on', v), th = $('#seg .thumb', v); if (on && th) { th.style.left = on.offsetLeft + 'px'; th.style.width = on.offsetWidth + 'px'; } };
   thumb(); requestAnimationFrame(thumb); document.fonts && document.fonts.ready.then(thumb);
   $$('[data-m]', v).forEach((b) => (b.onclick = () => { $$('[data-m]', v).forEach((x) => x.classList.toggle('on', x === b)); thumb(); setTimeout(() => go('/?m=' + b.dataset.m), 220); }));
