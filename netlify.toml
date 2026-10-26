@@ -7,7 +7,7 @@
     X-Frame-Options = "DENY"
     Referrer-Policy = "no-referrer"
 
-# El botón "Deploy to Netlify" pedirá estas variables al desplegar.
+# The "Deploy to Netlify" button asks for these variables when deploying.
 [template.environment]
-  ANTHROPIC_API_KEY = "Tu API key de Anthropic (console.anthropic.com/settings/keys)"
-  APP_PASSWORD = "Una contraseña que elijas: la pondrás en Ajustes de la app"
+  ANTHROPIC_API_KEY = "Your Anthropic API key (console.anthropic.com/settings/keys)"
+  APP_PASSWORD = "A password you choose: you will enter it in the app Settings (Ajustes)"
