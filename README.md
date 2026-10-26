@@ -10,7 +10,7 @@ Upload photos of the whiteboard, textbook pages, PDFs or handwritten notes. Know
 
 It runs on **your own Anthropic (Claude) API key**. You pay only for what you use, usually $1–4 per month.
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/YOUR_USERNAME/knowly)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/loystudio-tech/Knowly)
 
 [Features](#features) · [Setup](#setup) · [Privacy](#privacy-and-data) · [Cost](#cost) · [Contributing](#contributing) · [Español](README.es.md)
 
@@ -65,7 +65,7 @@ The key is stored only in your browser. This is fine for personal use, but don't
 
 ```bash
 npm install -g netlify-cli
-git clone https://github.com/YOUR_USERNAME/knowly.git && cd knowly
+git clone https://github.com/loystudio-tech/Knowly.git && cd Knowly
 netlify login
 netlify sites:create --name knowly-yourname
 netlify link --name knowly-yourname

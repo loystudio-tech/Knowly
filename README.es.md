@@ -10,7 +10,7 @@ Sube fotos de la pizarra, del libro, PDFs o apuntes escritos a mano. Knowly los 
 
 Usa **tu propia API key** de Anthropic (Claude). Pagas solo lo que usas, normalmente 1-4 $ al mes.
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/TU_USUARIO/knowly)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/loystudio-tech/Knowly)
 
 [English](README.md) · [Cómo instalarlo](#instalación) · [Funciones](#funciones) · [Privacidad](#privacidad-y-datos)
 
@@ -63,7 +63,7 @@ La key se guarda solo en tu navegador. Es cómodo para uso personal, pero no com
 
 ```bash
 npm install -g netlify-cli
-git clone https://github.com/TU_USUARIO/knowly.git && cd knowly
+git clone https://github.com/loystudio-tech/Knowly.git && cd Knowly
 netlify login
 netlify sites:create --name knowly-tunombre
 netlify link --name knowly-tunombre
