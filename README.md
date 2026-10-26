@@ -12,7 +12,7 @@ It runs on **your own Anthropic (Claude) API key**. You pay only for what you us
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/loystudio-tech/Knowly)
 
-[Features](#features) · [Setup](#setup) · [Privacy](#privacy-and-data) · [Cost](#cost) · [Contributing](#contributing) · [Español](README.es.md)
+[Features](#features) · [Setup](#setup) · [Desktop app](#desktop-app-mac-windows-linux) · [Privacy](#privacy-and-data) · [Cost](#cost) · [Contributing](#contributing) · [Español](README.es.md)
 
 </div>
 
@@ -42,26 +42,60 @@ Works on **Mac, PC, iPad and phone**. Installable as an app (PWA), with dark and
 
 ## Setup
 
-You need an **Anthropic API key**. Create one at [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys). I recommend setting a monthly spending limit under **Settings → Limits** (for example, $10).
+Knowly runs **anywhere**: as a desktop app, in your browser, or on any host. You always use **your own Anthropic API key**. Create one at [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) and set a monthly spending limit under **Settings → Limits** (for example, $10).
 
-### Option A: one-click Netlify (recommended)
+| I want to… | Use | Needs a server? |
+|---|---|---|
+| Use it as a **Mac / Windows / Linux app** | [Desktop app](#desktop-app-mac-windows-linux) | No |
+| Try it in 1 minute | [Open `index.html` / GitHub Pages](#no-server-fastest) | No |
+| Put it online for me or my class | [Netlify](#netlify) · [Vercel](#vercel) · [Cloudflare Pages](#cloudflare-pages) | Yes (included) |
+| Host it on my own machine, VPS, Render, Railway… | [Node server](#any-node-host-render-railway-vps-docker) | Yes (included) |
 
-1. Fork this repo, or press the **Deploy to Netlify** button above.
-2. Netlify asks for two values:
-   - `ANTHROPIC_API_KEY`: your API key.
-   - `APP_PASSWORD`: a password you make up. It stops anyone else from spending your credit if they find your site.
-3. When the deploy finishes, open your site, go to **Ajustes** (Settings, bottom left) and enter that password.
+There are two ways to connect the AI, and you can switch in **Ajustes** (Settings) at any time:
 
-Your API key stays in Netlify and never reaches the browser.
+- **Server mode (recommended for sharing):** your API key lives in the host's environment variables and never reaches the browser. Set `ANTHROPIC_API_KEY` and `APP_PASSWORD` (a password you make up, so nobody else can spend your credit). Then enter that password in **Ajustes**.
+- **Direct key mode (no server):** paste your API key in **Ajustes → Clave directa**. The key is stored only in your browser or app. Great for personal use; don't share that browser.
 
-### Option B: no server (fastest)
+Everything uses the same `/api/ai` endpoint, so the app doesn't care which host you pick.
+
+### Desktop app (Mac, Windows, Linux)
+
+Download the latest `.dmg` (Mac), `.exe` (Windows) or `.AppImage` (Linux) from the [Releases](../../releases) page, open it and paste your key in **Ajustes → Clave directa**.
+
+- **Mac:** the app is not signed by Apple, so the first time right-click it and choose **Open** (or **System Settings → Privacy & Security → Open Anyway**).
+- Voice dictation (live notes with the microphone) may not work in the desktop app. For that, use the browser version installed as an app (see below). Spoken answers work everywhere.
+- **Build it yourself:** `cd desktop && npm install && npm run dist` (the app appears in `desktop/dist`).
+- **Publish your own release:** push a tag (`git tag v1.0.0 && git push --tags`). GitHub Actions builds all three apps and attaches them to a Release.
+
+### No server (fastest)
 
 1. Download the repo (**Code → Download ZIP**) and open `index.html` in Chrome or Safari. You can also host it for free on **GitHub Pages**.
-2. In **Ajustes → Clave directa** (Settings → Direct key), paste your API key.
+2. In **Ajustes → Clave directa**, paste your API key.
 
-The key is stored only in your browser. This is fine for personal use, but don't share that browser or a URL where your key is saved.
+### Netlify
 
-### Option C: Netlify from the terminal
+Press the **Deploy to Netlify** button at the top (or **Add new site → Import from Git**). Set `ANTHROPIC_API_KEY` and `APP_PASSWORD` when asked. The proxy is `netlify/edge-functions/ai.js`.
+
+> ⚠️ Dragging the folder into *Netlify Drop* does not work, because the AI function would not be published.
+
+### Vercel
+
+**Add New → Project → Import** this repo. Leave the build settings empty (framework "Other") and add `ANTHROPIC_API_KEY` and `APP_PASSWORD` under **Environment Variables**. The proxy is `api/ai.js`.
+
+### Cloudflare Pages
+
+**Workers & Pages → Create → Pages → Connect to Git.** Leave the build command empty and set the output directory to `/`. Add `ANTHROPIC_API_KEY` and `APP_PASSWORD` under **Settings → Variables and Secrets**. The proxy is `functions/api/ai.js`.
+
+### Any Node host (Render, Railway, VPS, Docker…)
+
+```bash
+git clone https://github.com/loystudio-tech/Knowly.git && cd Knowly
+ANTHROPIC_API_KEY=sk-ant-... APP_PASSWORD=your-password node server.js
+```
+
+Needs Node 18+. On Render or Railway, use `npm start` as the start command and add the two variables. Optional: `PORT` (default 8787).
+
+### Netlify from the terminal
 
 ```bash
 npm install -g netlify-cli
@@ -74,11 +108,9 @@ netlify env:set APP_PASSWORD "your-password"
 netlify deploy --prod
 ```
 
-To test locally with the AI function: copy `.env.example` to `.env`, fill it in and run `netlify dev`.
+To test locally with the AI function: copy `.env.example` to `.env`, fill it in and run `netlify dev` (or just `node server.js`).
 
-> ⚠️ Dragging the folder into *Netlify Drop* does not work, because the AI function would not be published. Use option A or C.
-
-### Install it as an app
+### Install it as an app from the browser
 
 - **iPad or iPhone:** in Safari, **Share → Add to Home Screen**.
 - **Mac:** in Safari, **File → Add to Dock**. In Chrome, use the install icon in the address bar.
@@ -91,7 +123,7 @@ To test locally with the AI function: copy `.env.example` to `.env`, fill it in 
 - Files are sent to the Anthropic API only when you ask the AI to do something.
 - To move to another device: **Ajustes → Exportar** (Export), then **Importar** (Import) on the other device.
 - No analytics and no tracking.
-- Your API key is never stored in this repo. It lives in Netlify environment variables or, in direct mode, only in your own browser.
+- Your API key is never stored in this repo. It lives in your host's environment variables or, in direct mode, only in your own browser or app.
 
 ## Cost
 
@@ -100,7 +132,8 @@ Knowly is free. You only pay for the Anthropic API usage. With Sonnet 5.5, a nor
 ## How it's built
 
 - **A single file** (`index.html`) with HTML, CSS and JavaScript, no frameworks.
-- `netlify/edge-functions/ai.js`: a small proxy that adds your API key and checks the password. It streams, so long answers don't get cut off.
+- A small proxy (`/api/ai`) that adds your API key and checks the password. It streams, so long answers don't get cut off. One version per host: `netlify/edge-functions/ai.js`, `api/ai.js` (Vercel), `functions/api/ai.js` (Cloudflare) and `server.js` (Node).
+- `desktop/`: an Electron wrapper that packages the same `index.html` as a Mac, Windows and Linux app.
 - Libraries via CDN: [marked](https://github.com/markedjs/marked), [KaTeX](https://katex.org) and [DOMPurify](https://github.com/cure53/DOMPurify).
 - JSON output uses the Claude API's structured outputs.
 

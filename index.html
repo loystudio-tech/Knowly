@@ -9,11 +9,11 @@
 <meta name="theme-color" content="#f4f6fa" media="(prefers-color-scheme: light)">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Knowly">
-<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
@@ -1170,7 +1170,8 @@ function words(s) { return (String(s).trim().match(/\S+/g) || []).length; }
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
 /* ---------------- settings (per device) ---------------- */
-const SETTINGS_DEFAULT = { mode: 'netlify', password: '', apiKey: '', model: 'claude-sonnet-5-5', name: '', theme: 'dark', rate: 1, voice: '', sidebarMini: false, autoSpeak: true };
+const NO_SERVER = location.protocol === 'file:' || /\.github\.io$/.test(location.hostname) || !!window.KNOWLY_DESKTOP;
+const SETTINGS_DEFAULT = { mode: NO_SERVER ? 'direct' : 'netlify', password: '', apiKey: '', model: 'claude-sonnet-5-5', name: '', theme: 'dark', rate: 1, voice: '', sidebarMini: false, autoSpeak: true };
 let SETTINGS = { ...SETTINGS_DEFAULT };
 try { SETTINGS = { ...SETTINGS_DEFAULT, ...JSON.parse(localStorage.getItem('knowly.settings') || '{}') }; } catch (e) {}
 function saveSettings() { try { localStorage.setItem('knowly.settings', JSON.stringify(SETTINGS)); } catch (e) {} }
@@ -1352,7 +1353,7 @@ async function ai({ system, messages, schema, max_tokens = 8000, model, onText, 
       const t = await res.text();
       let msg = t.slice(0, 300);
       try { const j = JSON.parse(t); msg = j.error?.message || j.error || msg; } catch (e) {}
-      if (res.status === 404 && !direct) msg = 'No encuentro /api/ai. Despliega en Netlify o usa «Clave directa» en Ajustes.';
+      if (res.status === 404 && !direct) msg = 'Este alojamiento no tiene el servidor de la IA (/api/ai). Usa «Clave directa» en Ajustes o despliega en Netlify, Vercel o Cloudflare (mira el README).';
       if (res.status === 401) msg = direct ? 'API key no válida (Ajustes).' : 'Contraseña incorrecta. Ponla en Ajustes.';
       if (res.status === 413) msg = 'El material es demasiado grande. Prueba con menos fotos o un PDF más corto.';
       if (res.status === 529 || res.status === 503) msg = 'La IA está saturada ahora mismo. Prueba en un momento.';
@@ -1933,9 +1934,9 @@ function openSettings() {
   if ($('#settings-modal')) return;
   const m = openModal(`<div id="settings-modal"><h2>Ajustes</h2><p class="lead">Todo se guarda solo en este dispositivo.</p>
     <label class="lbl">Conexión con la IA</label>
-    <div class="seg2" id="smode"><button data-v="netlify">Netlify (recomendado)</button><button data-v="direct">Clave directa</button></div>
-    <div id="snet"><label class="lbl">Contraseña de la app</label><input class="inp" id="spass" type="password" placeholder="La que pusiste en APP_PASSWORD en Netlify" value="${esc(SETTINGS.password)}"><p class="hint">Tu API key vive en Netlify, no en el navegador.</p></div>
-    <div id="sdir"><label class="lbl">API key de Anthropic</label><input class="inp" id="skey" type="password" placeholder="sk-ant-…" value="${esc(SETTINGS.apiKey)}"><p class="hint">Para usarla sin servidor (abriendo el archivo o en GitHub Pages). Se guarda solo en este navegador. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Consigue tu API key</a></p></div>
+    <div class="seg2" id="smode"><button data-v="netlify">Mi servidor (recomendado)</button><button data-v="direct">Clave directa</button></div>
+    <div id="snet"><label class="lbl">Contraseña de la app</label><input class="inp" id="spass" type="password" placeholder="La que pusiste en APP_PASSWORD" value="${esc(SETTINGS.password)}"><p class="hint">Tu API key vive en tu servidor (Netlify, Vercel, Cloudflare…), no en el navegador.</p></div>
+    <div id="sdir"><label class="lbl">API key de Anthropic</label><input class="inp" id="skey" type="password" placeholder="sk-ant-…" value="${esc(SETTINGS.apiKey)}"><p class="hint">Para usarla sin servidor (abriendo el archivo, en GitHub Pages o en la app de escritorio). Se guarda solo en este navegador. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Consigue tu API key</a></p></div>
     <label class="lbl">Modelo</label><select class="inp" id="smodel">${MODELS.map(([v, l]) => `<option value="${v}" ${SETTINGS.model === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <div class="row" style="gap:16px;align-items:flex-start"><div class="grow"><label class="lbl">Tu nombre</label><input class="inp" id="sname" value="${esc(SETTINGS.name)}" placeholder="Opcional"></div><div class="grow"><label class="lbl">Velocidad de voz</label><select class="inp" id="srate">${[0.85, 1, 1.15, 1.3].map((r) => `<option ${SETTINGS.rate == r ? 'selected' : ''} value="${r}">${r}x</option>`).join('')}</select></div></div>
     <label class="lbl">Voz en español</label><select class="inp" id="svoice"><option value="">Automática</option>${Speech.list('es-ES').map((v) => `<option ${SETTINGS.voice === v.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
@@ -2729,7 +2730,7 @@ function eventForm(ev, after) {
   });
   document.addEventListener('pointermove', (e) => { const el = e.target.closest && e.target.closest('.spot'); if (!el) return; const r = el.getBoundingClientRect(); el.style.setProperty('--mx', e.clientX - r.left + 'px'); el.style.setProperty('--my', e.clientY - r.top + 'px'); }, { passive: true });
   let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { const top = '/' + ((location.hash.slice(2).split(/[/?]/)[0]) || ''); $('#sb').classList.toggle('mini', SETTINGS.sidebarMini || ['/set', '/exam', '/exams', '/writing', '/board'].includes(top) || (innerWidth < 1200 && innerWidth > 700)); }, 150); });
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('/sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   window.addEventListener('beforeunload', (e) => { if (AI_BUSY) { e.preventDefault(); e.returnValue = ''; } });
 })();
 /* =================== slash assist (/skill autocomplete) =================== */
