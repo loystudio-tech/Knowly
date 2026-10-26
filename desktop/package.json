@@ -1,0 +1,31 @@
+{
+  "name": "knowly-desktop",
+  "version": "1.0.0",
+  "description": "Knowly desktop app (Mac, Windows, Linux)",
+  "author": "Knowly",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "prepare-app": "node prepare.js",
+    "start": "node prepare.js && electron .",
+    "dist": "node prepare.js && electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "app.knowly.desktop",
+    "productName": "Knowly",
+    "files": ["main.js", "preload.js", "app/**"],
+    "directories": { "buildResources": "build", "output": "dist" },
+    "artifactName": "Knowly-${version}-${os}-${arch}.${ext}",
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "extendInfo": { "NSMicrophoneUsageDescription": "Knowly uses the microphone for live notes and voice questions." }
+    },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
+    "linux": { "target": ["AppImage"], "category": "Education" }
+  }
+}

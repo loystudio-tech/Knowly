@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
+
+# The "Deploy to Netlify" button asks for these variables when deploying.
+[template.environment]
+  ANTHROPIC_API_KEY = "Your Anthropic API key (console.anthropic.com/settings/keys)"
+  APP_PASSWORD = "A password you choose: you will enter it in the app Settings (Ajustes)"
