@@ -1246,6 +1246,19 @@ body.ab-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
   .topic-head{flex-wrap:wrap;gap:14px}
 }
 @media (hover:none){.bp-pick{opacity:1}}
+
+/* board: interrupting with a question */
+.board-ask{max-width:860px;margin:0 auto 12px;padding:12px 14px;border-radius:18px;background:var(--card);border:1px solid var(--line2)}
+.board-ask .box{display:flex;align-items:center;gap:6px;padding:4px 6px 4px 14px;border-radius:14px;background:var(--card2);border:1px solid var(--line)}
+.board-ask .box input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font-size:16px;height:40px}
+.board-ask .sq-btn.mic-on,.board-ask .mic-on{background:var(--bad,#e5484d);color:#fff;animation:micpulse 1.2s infinite}
+@keyframes micpulse{50%{box-shadow:0 0 0 8px rgba(229,72,77,.18)}}
+.bstep.qa{border-left:4px solid var(--accent);padding-left:14px}
+.qa-q{display:flex;align-items:center;gap:6px;color:var(--accent2);font-weight:600;margin-bottom:4px}.qa-q svg{width:14px;height:14px}
+@media (prefers-reduced-motion:reduce){.board-ask .mic-on{animation:none}}
+.board-dock{position:sticky;bottom:0;z-index:6;padding:6px 0 8px;margin-top:8px;background:linear-gradient(to top,var(--panel) 78%,transparent)}
+.board-dock .board-ctrl{margin:6px 0}
+.qa-q{font-family:var(--font,inherit);font-size:13.5px}
 </style>
 </head>
 <body>
@@ -2182,16 +2195,19 @@ function quizRunner(el, qs, { onAnswer, onDone, title = 'Quiz', review = false }
 }
 
 /* =================== whiteboard player =================== */
+SCHEMA.boardAnswer = S.obj({ steps: S.arr(S.obj({ heading: S.str(), board: S.str('Lo que se escribe en la pizarra: markdown corto, LaTeX con $'), narration: S.str('Lo que dice el profesor en voz alta, 1-3 frases, sin LaTeX'), svg: S.str('Dibujo SVG simple o cadena vacía'), say_foreign: S.str('Frase en idioma extranjero para leer con su voz, o cadena vacía'), foreign_language: S.str('Código BCP-47 de say_foreign o cadena vacía') })) });
 function boardPlayer(el, board, { onClose } = {}) {
-  let cur = -1, playing = false, muted = !SETTINGS.autoSpeak;
+  let cur = -1, playing = false, muted = !SETTINGS.autoSpeak, asking = false, rec = null, qbusy = false, wasPlaying = false, answered = false;
   const lang = board.language || 'es-ES';
-  const steps = board.steps || [];
+  const steps = [...(board.steps || [])];            // local copy: the answers to your questions are added here, not saved into the set
+  const qhist = [];
   el.innerHTML = `<div class="board-wrap">
     <div class="paper" id="paper"><h2>${esc(board.title)}</h2><div id="bsteps"></div></div>
-    <div class="board-ctrl no-print"><button class="btn btn-ghost" id="bprev">${ic('left')}</button><button class="btn btn-primary btn-lg" id="bplay">${ic('play')} Empezar</button><button class="btn btn-ghost" id="bnext">${ic('right')}</button><button class="btn btn-line" id="bmute">${ic(muted ? 'mute' : 'vol')}</button><button class="btn btn-line" id="ball">Mostrar todo</button></div>
-    <p class="narr" id="narr">Pulsa «Empezar» y la explicación se escribirá paso a paso con voz.</p></div>`;
+    <div class="board-dock no-print"><div class="board-ctrl"><button class="btn btn-ghost" id="bprev">${ic('left')}</button><button class="btn btn-primary btn-lg" id="bplay">${ic('play')} Empezar</button><button class="btn btn-ghost" id="bnext">${ic('right')}</button><button class="btn btn-soft" id="bask" title="Para la clase y pregunta con tu voz o escribiendo">${ic('mic')} Tengo una duda</button><button class="btn btn-line" id="bmute">${ic(muted ? 'mute' : 'vol')}</button><button class="btn btn-line" id="ball">Mostrar todo</button></div>
+    <div class="board-ask hidden" id="bq"><div class="row" style="gap:8px"><div class="box grow"><input id="bqin" placeholder="Habla o escribe tu duda…" autocomplete="off"><button class="icon-btn" id="bqgo" title="Enviar">${ic('send')}</button></div><button class="sq-btn" id="bqmic" title="Hablar">${ic('mic')}</button><button class="btn btn-primary" id="bqback">${ic('play')} Seguir la clase</button></div><p class="muted" id="bqst" style="margin:8px 2px 0;font-size:13.5px"></p></div></div>
+    <p class="narr" id="narr">Pulsa «Empezar» y la explicación se escribirá paso a paso con voz. Si algo no lo entiendes, pulsa «Tengo una duda» en cualquier momento.</p></div>`;
   const paint = () => {
-    $('#bsteps', el).innerHTML = steps.slice(0, cur + 1).map((s, k) => `<div class="bstep ${k === cur ? 'cur' : 'dim'}">${s.heading ? `<h3>${esc(s.heading)}</h3>` : ''}${s.svg ? `<div class="art">${safeSvg(s.svg)}</div>` : ''}<div class="md">${md(s.board)}</div></div>`).join('');
+    $('#bsteps', el).innerHTML = steps.slice(0, cur + 1).map((s, k) => `<div class="bstep ${k === cur ? 'cur' : 'dim'} ${s.q ? 'qa' : ''}">${s.q ? `<small class="qa-q">${ic('mic')} ${esc(s.q)}</small>` : ''}${s.heading ? `<h3>${esc(s.heading)}</h3>` : ''}${s.svg ? `<div class="art">${safeSvg(s.svg)}</div>` : ''}<div class="md">${md(s.board)}</div></div>`).join('');
     const last = $$('.bstep', el).pop(); if (last) last.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     $('#narr', el).textContent = cur >= 0 ? steps[cur].narration : '';
     $('#bplay', el).innerHTML = playing ? `${ic('pause')} Pausa` : cur >= steps.length - 1 && cur >= 0 ? `${ic('refresh')} Repetir` : `${ic('play')} ${cur < 0 ? 'Empezar' : 'Seguir'}`;
@@ -2213,13 +2229,49 @@ function boardPlayer(el, board, { onClose } = {}) {
     playing = false; paint();
   };
   const pause = () => { playing = false; Speech.stop(); paint(); };
-  $('#bplay', el).onclick = () => { if (playing) return pause(); if (cur >= steps.length - 1) cur = -1; run(); };
-  $('#bnext', el).onclick = () => { pause(); if (cur < steps.length - 1) { cur++; paint(); if (!muted) speak(steps[cur]); } };
-  $('#bprev', el).onclick = () => { pause(); if (cur > 0) { cur--; paint(); } };
+  /* --- interrupting with a question (voice or text) --- */
+  const stopRec = () => { if (rec) { try { rec.stop(); } catch (e) {} rec = null; } $('#bqmic', el).classList.remove('mic-on'); };
+  const status = (t) => { $('#bqst', el).textContent = t || ''; };
+  const listen = () => {
+    if (qbusy) return;
+    Speech.stop(); stopRec();
+    if (!SR) return status('Tu navegador no tiene dictado por voz: escribe tu duda.');
+    $('#bqmic', el).classList.add('mic-on'); status('Te escucho… di tu duda.');
+    rec = dictate({ lang, onText: (f, i) => { $('#bqin', el).value = (f + i).trim(); }, onEnd: (t) => { rec = null; $('#bqmic', el).classList.remove('mic-on'); const q = ($('#bqin', el).value || t || '').trim(); if (q && asking && !qbusy) ask(q); else if (!q) status('No te he oído. Pulsa el micro y vuelve a intentarlo, o escribe.'); } });
+  };
+  const openAsk = () => { wasPlaying = playing; answered = false; pause(); asking = true; $('#bq', el).classList.remove('hidden'); $('#bqin', el).value = ''; listen(); };
+  const closeAsk = () => { stopRec(); asking = false; $('#bq', el).classList.add('hidden'); status(''); };
+  const ask = async (q) => {
+    stopRec(); qbusy = true; status('Pensando la respuesta…');
+    const seen = steps.slice(0, cur + 1).map((s, k) => `Paso ${k + 1}${s.heading ? ' (' + s.heading + ')' : ''}: en la pizarra «${s.board}»; dicho: «${s.narration}»`).join('\n') || '(aún no has empezado)';
+    const next = steps.slice(cur + 1).map((s) => s.heading || s.board.slice(0, 40)).join(' → ') || '(era el final)';
+    try {
+      const r = await ai({ system: SYS(), max_tokens: 3500, schema: SCHEMA.boardAnswer, messages: [...qhist.slice(-6), { role: 'user', content: `Estás dando una clase en pizarra titulada «${board.title}». Lo que ya has explicado:\n${seen}\n\nLo que tenías previsto explicar después: ${next}\n\nEl estudiante te interrumpe con una duda: «${q}»\n\nRespóndele como un buen profesor particular, SOLO a su duda, y vuelve a explicar con otro enfoque o ejemplo si no lo ha entendido. Devuelve 1 o 2 pasos de pizarra (board: lo que escribes; narration: lo que dices, 1-3 frases naturales sin LaTeX; svg solo si un dibujo ayuda). La narración va en el idioma de la clase.` }] });
+      const add = (r.steps || []).slice(0, 2).filter((x) => x && x.narration);
+      if (!add.length) throw new Error('Sin respuesta');
+      add.forEach((x, k) => { x.q = k === 0 ? q : ''; if (k === 0 && !x.heading) x.heading = 'Tu duda'; });
+      qhist.push({ role: 'user', content: q }, { role: 'assistant', content: add.map((x) => x.narration).join(' ') });
+      steps.splice(cur + 1, 0, ...add);
+      answered = true; $('#bqin', el).value = ''; cur++; paint(); closeAsk();
+      $('#bq', el).classList.remove('hidden'); asking = true;
+      status('¿Queda claro? Haz otra pregunta o sigue con la clase.');
+      if (!muted && Speech.ok) { const my = Speech.gen; await speak(steps[cur]); if (my === Speech.gen && add.length > 1) { cur++; paint(); await speak(steps[cur]); } }
+    } catch (e) { status('No pude responder: ' + e.message); }
+    qbusy = false;
+  };
+  $('#bask', el).onclick = openAsk;
+  $('#bqmic', el).onclick = () => (rec ? stopRec() : listen());
+  $('#bqgo', el).onclick = () => { const q = $('#bqin', el).value.trim(); if (q) ask(q); };
+  $('#bqin', el).onkeydown = (e) => { if (e.key === 'Enter') $('#bqgo', el).click(); };
+  $('#bqin', el).oninput = () => { if (rec) stopRec(); };
+  $('#bqback', el).onclick = () => { closeAsk(); if (!answered && wasPlaying && cur >= 0) cur--; if (cur >= steps.length - 1 && cur >= 0) return paint(); run(); };
+  $('#bplay', el).onclick = () => { if (asking) closeAsk(); if (playing) return pause(); if (cur >= steps.length - 1) cur = -1; run(); };
+  $('#bnext', el).onclick = () => { pause(); closeAsk(); if (cur < steps.length - 1) { cur++; paint(); if (!muted) speak(steps[cur]); } };
+  $('#bprev', el).onclick = () => { pause(); closeAsk(); if (cur > 0) { cur--; paint(); } };
   $('#bmute', el).onclick = () => { muted = !muted; $('#bmute', el).innerHTML = ic(muted ? 'mute' : 'vol'); if (muted) Speech.stop(); };
-  $('#ball', el).onclick = () => { pause(); cur = steps.length - 1; paint(); $$('.bstep', el).forEach((b) => b.classList.remove('dim')); };
+  $('#ball', el).onclick = () => { pause(); closeAsk(); cur = steps.length - 1; paint(); $$('.bstep', el).forEach((b) => b.classList.remove('dim')); };
   paint();
-  return { stop: pause };
+  return { stop: () => { stopRec(); pause(); } };
 }
 function openBoard(board) {
   const m = openModal(`<div id="bd"></div>`, { cls: 'wide', onClose: () => Speech.stop() });
