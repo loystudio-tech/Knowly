@@ -22,16 +22,18 @@ Usa **tu propia API key** de Anthropic (Claude). Pagas solo lo que usas, normalm
 
 | | |
 |---|---|
+| 🎒 **Mochila** | Suelta hasta 30 capturas, fotos, PDFs o Word. Knowly lee cada uno y lo clasifica por **tipo** (explicación, ejercicios, deberes, examen, apuntes) y por **clase** (Mates, Física…). Una pizarra con teoría es una explicación; una pizarra con ejercicios A, B, C son ejercicios. Puedes renombrar o unir clases (por ejemplo Física y Química) y, con cualquier selección, repasar, generar ejercicios nuevos, preparar un examen o crear una skill. |
+| 📝 **Deberes** | Sube una foto o captura y olvídate: Knowly lo prepara en segundo plano. **Te lo explica paso a paso en vez de solo resolverlo** (primero pistas, luego compruebas tu respuesta), con chat de tutor, pizarra con voz, lectura en voz alta con traducción y vocabulario para alemán, español u otros idiomas, lo pone en el calendario (y cuándo leerlo) y, si es material de examen, crea guía de estudio, flashcards, test y un plan con cuenta atrás. |
+| ➕ **Crear desde…** | Todas las pantallas de «crear» (flashcards, quiz, guía, examen, skill, deberes) aceptan hasta 10 fuentes: archivos, texto pegado, **YouTube**, **vídeo** (se analizan fotogramas), enlaces públicos de **Google Drive**, páginas web, cámara, arrastrar y soltar, Word y PowerPoint. |
 | 🧮 **Solver** | Resuelve problemas paso a paso a partir de texto, una foto, un PDF o algo escrito a mano (también con Apple Pencil). Puedes preguntarle sobre la solución. |
 | 🧑‍🏫 **Pizarra** | Una clase que se va escribiendo paso a paso, con dibujos y voz. |
 | 📚 **Sets de estudio** | Se crean desde tus archivos y se ordenan solos por materia. Cada set trae guía de estudio, guía de repaso, flashcards, quiz, simulacro, chuleta, podcast y un tutor con chat (también por voz). |
 | 🔁 **Repaso diario** | Repetición espaciada con todas tus flashcards, racha de días y mapa de actividad. |
 | 🎯 **Predictor de exámenes** | Temas más probables, plan de estudio día a día, simulacros y chuleta. |
 | ✨ **Skills** (`/`) | Sube un PDF o fotos con ejercicios hechos a tu manera (o a la de tu profe). Knowly aprende el método y lo aplica cuando escribes `/nombre`. También crea ejercicios nuevos y te enseña el método en la pizarra. |
-| ⚡ **Automatizaciones** | «Cuando subo apuntes de Mates → crea flashcards, quiz y 5 ejercicios con mi skill». Se activan al subir material, al apuntar un examen, al sacar mala nota o cada día. |
+| ⚡ **Automatizaciones** | Monta reglas con **bloques**, como en Scratch (arrastrar y soltar, con `si / entonces / si no`), o usa la lista de pasos sencilla. Ejemplo: «El día del examen → resumen rápido + aviso por la mañana para repasar». Se activan al subir material, al ordenar la mochila, al tener los deberes listos, al apuntar un examen, N días antes de un examen, al sacar mala nota o cada día. |
 | ✍️ **Escritura** | Corrector, mejorar redacción, parafrasear, resumir, citas (APA, MLA…) y explicar textos. |
-| 🎙️ **Apuntes en vivo** | Transcribe la clase con el micrófono y la convierte en material de estudio. |
-| 📅 **Calendario** | Deberes y exámenes, con avisos y un botón «Preparar con IA». |
+| 📅 **Calendario** | Deberes, lecturas y exámenes (con hora opcional), avisos dentro de la app (campana) y **exportación .ics** con alarmas para tu app de calendario. |
 | ⌘ **Buscador** | ⌘K / Ctrl+K para ir a cualquier sitio o lanzar acciones. |
 
 Funciona en **Mac, PC, iPad y móvil**. Se instala como app (PWA), tiene modo oscuro y claro, y abre sin conexión.
@@ -61,7 +63,7 @@ Todo usa el mismo endpoint `/api/ai`, así que da igual qué alojamiento elijas.
 Descarga el último `.dmg` (Mac), `.exe` (Windows) o `.AppImage` (Linux) desde [Releases](../../releases), ábrelo y pega tu key en **Ajustes → Clave directa**.
 
 - **Mac:** la app no está firmada por Apple. La primera vez, clic derecho → **Abrir** (o **Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente**).
-- El dictado por voz (apuntes en vivo con micrófono) puede no funcionar en la app de escritorio. Para eso usa la versión web instalada como app. Las voces que leen en alto funcionan en todas.
+- Las voces que leen en alto usan las del sistema y funcionan en todas. El dictado con micrófono puede no funcionar en la app de escritorio; usa la versión web instalada como app.
 - **Compilarla tú:** `cd desktop && npm install && npm run dist` (queda en `desktop/dist`).
 - **Publicar tu propia versión:** sube una etiqueta (`git tag v1.0.0 && git push --tags`). GitHub Actions compila las tres apps y las adjunta a un Release.
 
@@ -100,6 +102,14 @@ Necesita Node 18+. En Render o Railway usa `npm start` como comando de inicio y 
 
 ---
 
+## Qué puede y qué no puede hacer (límites reales)
+
+- **No envía correos de verdad.** Knowly no tiene un servidor que mande emails. Los avisos son una campana dentro de la app, notificaciones del navegador (con la app abierta), **archivos .ics cuyas alarmas dispara tu app de calendario aunque Knowly esté cerrada** y un botón «enviarme un email» que abre tu correo (`mailto:`).
+- **No oye audio.** Claude lee imágenes y texto, no sonido. Los vídeos se analizan por fotogramas (diapositivas, pizarra); para lo que se dice en voz sube los subtítulos (`.srt` / `.vtt`) o pega la transcripción. Los archivos de audio no están soportados.
+- **YouTube, Drive y páginas web** los descarga el endpoint del servidor `/api/source` (necesita el modo servidor en Netlify, Vercel, Cloudflare o Node — no funciona en la app de escritorio, en modo clave directa ni con un `index.html` suelto; ahí puedes seguir subiendo archivos y vídeo o pegando texto y transcripciones). YouTube puede bloquear las direcciones de servidores; en ese caso la app te avisa y puedes pegar la transcripción. Drive solo funciona con archivos compartidos con «cualquiera que tenga el enlace».
+- **Las voces** son las de tu dispositivo (puedes elegir una por idioma en Ajustes). No hay voces neuronales de pago.
+- Las alarmas del `.ics` y la campana necesitan que abras el archivo de calendario o la app al menos una vez.
+
 ## Privacidad y datos
 
 - **Tus apuntes, sets y progreso se guardan en tu navegador** (IndexedDB). No hay base de datos ni cuentas.
@@ -114,6 +124,7 @@ Knowly es gratis. Solo pagas el uso de la API de Anthropic. Con Sonnet 5.5, un m
 ## Cómo está hecho
 
 - **Un solo archivo** (`index.html`) con HTML, CSS y JavaScript sin frameworks.
+- Un segundo endpoint, `/api/source`, que descarga transcripciones de YouTube, archivos de Drive y páginas web (lógica común en `lib/source.js`; la copia de Netlify se genera con `scripts/sync-netlify-source.sh`, ejecútalo tras editar `lib/source.js`).
 - Un proxy pequeño (`/api/ai`) que añade tu API key y comprueba la contraseña. Usa *streaming*, así que las respuestas largas no se cortan. Hay una versión por alojamiento: `netlify/edge-functions/ai.js`, `api/ai.js` (Vercel), `functions/api/ai.js` (Cloudflare) y `server.js` (Node).
 - `desktop/`: un envoltorio de Electron que empaqueta el mismo `index.html` como app de Mac, Windows y Linux.
 - Librerías por CDN: [marked](https://github.com/markedjs/marked), [KaTeX](https://katex.org) y [DOMPurify](https://github.com/cure53/DOMPurify).
@@ -126,9 +137,9 @@ Knowly es gratis. Solo pagas el uso de la API de Anthropic. Con Sonnet 5.5, un m
 Los issues y pull requests son bienvenidos. Ideas pendientes:
 
 - Sincronizar entre dispositivos (opcional, con Firebase o Supabase).
-- Recordatorios por email aunque la app esté cerrada.
+- Recordatorios por email de verdad (necesita un pequeño backend y un proveedor de correo).
 - Voces más naturales (TTS de pago, opcional).
-- Usar vídeos de YouTube y archivos de Word/PowerPoint como fuente.
+- Transcribir audio (grabaciones de clase) con un proveedor de voz a texto opcional.
 
 ## Licencia
 

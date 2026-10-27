@@ -22,16 +22,18 @@ It runs on **your own Anthropic (Claude) API key**. You pay only for what you us
 
 | | |
 |---|---|
+| 🎒 **Backpack** | Drop up to 30 screenshots, photos, PDFs or Word files. Knowly reads each one and sorts it by **type** (explanation, exercises, homework, exam, notes) and by **class** (Maths, Physics…). A whiteboard full of theory is an explanation; a whiteboard with exercises A, B, C is exercises. Rename or merge classes (e.g. Physics + Chemistry) and later review, generate new exercises, prepare an exam or create a skill from any selection. |
+| 📝 **Homework** | Upload a photo or screenshot and walk away: Knowly prepares it in the background. It **explains step by step instead of just solving** (hints first, check your answer), has a tutor chat, a whiteboard with voice, reads German/Spanish/other-language texts aloud with translation and vocabulary, puts it in your calendar (and when to read it), and detects if it is exam material and builds a study guide, flashcards, a quiz and a countdown plan. |
+| ➕ **Create from…** | Every "create" screen (flashcards, quiz, study guide, exam, skill, homework) takes up to 10 sources: files, pasted text, **YouTube**, **video** (frames are analysed), **Google Drive** public links, web pages, camera, drag and drop, and Word/PowerPoint. |
 | 🧮 **Solver** | Solves problems step by step from text, a photo, a PDF or handwriting (Apple Pencil works too). You can ask follow-up questions about the solution. |
 | 🧑‍🏫 **Whiteboard tutor** | A lesson that writes itself step by step, with drawings and a voice. |
 | 📚 **Study sets** | Built from your files and sorted by subject automatically. Each set includes a study guide, review guide, flashcards, quiz, mock exam, cheat sheet, podcast and a chat tutor (voice supported). |
 | 🔁 **Daily review** | Spaced repetition across all your flashcards, with a day streak and an activity heatmap. |
 | 🎯 **Exam predictor** | Most likely topics, a day-by-day study plan, mock exams and a cheat sheet. |
 | ✨ **Skills** (`/`) | Upload a PDF or photos with exercises solved your way (or your teacher's way). Knowly learns the method and applies it whenever you type `/skill-name`. It can also generate new exercises and teach the method on the whiteboard. |
-| ⚡ **Automations** | "When I upload Math notes → create flashcards, a quiz and 5 exercises with my skill." Triggered when you upload material, add an exam, score low on a quiz, or every day. |
+| ⚡ **Automations** | Build rules with **blocks**, Scratch-style (drag and drop, with `if / then / else`), or use the simple step list. Example: "On exam day → quick summary + morning reminder to review". Triggers: material uploaded, backpack sorted, homework ready, exam added, N days before an exam, low quiz score, every day. |
 | ✍️ **Writing tools** | Proofreader, rewrite, paraphrase, summarize, citations (APA, MLA…) and text explainer. |
-| 🎙️ **Live notes** | Transcribes a class with your microphone and turns it into study material. |
-| 📅 **Calendar** | Homework and exams with reminders and a "Prepare with AI" button. |
+| 📅 **Calendar** | Homework, readings and exams (with an optional time), in-app reminders (bell) and a **.ics export** with alarms for your calendar app. |
 | ⌘ **Command palette** | ⌘K / Ctrl+K to jump anywhere or run actions. |
 
 Works on **Mac, PC, iPad and phone**. Installable as an app (PWA), with dark and light themes, and it opens offline.
@@ -63,7 +65,7 @@ Everything uses the same `/api/ai` endpoint, so the app doesn't care which host 
 Download the latest `.dmg` (Mac), `.exe` (Windows) or `.AppImage` (Linux) from the [Releases](../../releases) page, open it and paste your key in **Ajustes → Clave directa**.
 
 - **Mac:** the app is not signed by Apple, so the first time right-click it and choose **Open** (or **System Settings → Privacy & Security → Open Anyway**).
-- Voice dictation (live notes with the microphone) may not work in the desktop app. For that, use the browser version installed as an app (see below). Spoken answers work everywhere.
+- Spoken answers use your system voices and work everywhere. Voice dictation with the microphone may not work in the desktop app; use the browser version installed as an app (see below).
 - **Build it yourself:** `cd desktop && npm install && npm run dist` (the app appears in `desktop/dist`).
 - **Publish your own release:** push a tag (`git tag v1.0.0 && git push --tags`). GitHub Actions builds all three apps and attaches them to a Release.
 
@@ -117,6 +119,14 @@ To test locally with the AI function: copy `.env.example` to `.env`, fill it in 
 
 ---
 
+## What it can and can't do (honest limits)
+
+- **No real e-mail.** Knowly has no backend that sends mail. Reminders are an in-app bell, browser notifications (while the app is open), **.ics files whose alarms your calendar app fires even when Knowly is closed**, and a "send me an e-mail" button that opens your mail app (`mailto:`).
+- **Audio is not heard.** Claude reads images and text, not sound. Videos are analysed as frames (slides, whiteboard); for the spoken part upload the subtitles (`.srt` / `.vtt`) or paste the transcript. Audio files are not supported.
+- **YouTube, Drive and web pages** are fetched by the server endpoint `/api/source` (so it needs server mode on Netlify, Vercel, Cloudflare or Node — not the desktop app, direct-key mode or a bare `index.html`; there you can still upload files, video, paste text or transcripts). YouTube may block server addresses, in which case the app tells you and you can paste the transcript instead. Drive only works for files shared with "anyone with the link".
+- **Voices** are the ones your device provides (you can pick one per language in Settings). There are no paid neural voices.
+- Alarms in the `.ics` and the in-app bell need you to open the calendar file or the app at least once.
+
 ## Privacy and data
 
 - **Your notes, sets and progress are stored in your browser** (IndexedDB). There is no database and no accounts.
@@ -132,6 +142,7 @@ Knowly is free. You only pay for the Anthropic API usage. With Sonnet 5.5, a nor
 ## How it's built
 
 - **A single file** (`index.html`) with HTML, CSS and JavaScript, no frameworks.
+- A second endpoint, `/api/source`, fetches YouTube transcripts, Google Drive files and web pages (shared logic in `lib/source.js`; the Netlify copy is generated with `scripts/sync-netlify-source.sh`, run it after editing `lib/source.js`).
 - A small proxy (`/api/ai`) that adds your API key and checks the password. It streams, so long answers don't get cut off. One version per host: `netlify/edge-functions/ai.js`, `api/ai.js` (Vercel), `functions/api/ai.js` (Cloudflare) and `server.js` (Node).
 - `desktop/`: an Electron wrapper that packages the same `index.html` as a Mac, Windows and Linux app.
 - Libraries via CDN: [marked](https://github.com/markedjs/marked), [KaTeX](https://katex.org) and [DOMPurify](https://github.com/cure53/DOMPurify).
@@ -144,9 +155,9 @@ Want to rename it? Search for `const APP_NAME = 'Knowly';` in `index.html`.
 Issues and pull requests are welcome. Open ideas:
 
 - Optional cross-device sync (Firebase or Supabase).
-- Email reminders even when the app is closed.
+- Real e-mail reminders (needs a small backend and an e-mail provider).
 - More natural voices (optional paid TTS).
-- YouTube videos and Word/PowerPoint files as sources.
+- Audio transcription (for lecture recordings) with an optional speech-to-text provider.
 - Translating the interface to more languages.
 
 ## License
