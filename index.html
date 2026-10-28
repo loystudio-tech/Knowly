@@ -1259,6 +1259,8 @@ body.ab-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}
 .board-dock{position:sticky;bottom:0;z-index:6;padding:6px 0 8px;margin-top:8px;background:linear-gradient(to top,var(--panel) 78%,transparent)}
 .board-dock .board-ctrl{margin:6px 0}
 .qa-q{font-family:var(--font,inherit);font-size:13.5px}
+
+.sk-ico svg{width:56%;height:56%}
 </style>
 </head>
 <body>
@@ -1648,7 +1650,6 @@ const SCHEMA = {
   set: S.obj({
     title: S.str('Título claro del set'),
     subject: S.str('Materia o idioma, 1-2 palabras en español'),
-    emoji: S.str('Un emoji'),
     language: S.str('Código BCP-47 del idioma del contenido explicado, p.ej. es-ES'),
     overview: S.str('Resumen general en markdown'),
     sections: S.arr(S.obj({
@@ -1674,7 +1675,8 @@ Reglas:
 - Explica en español salvo que el estudiante escriba en otro idioma. Si el material es para aprender un idioma, explica en español y pon los ejemplos en ese idioma.
 - Adapta el nivel al material.
 - Usa markdown. Fórmulas en LaTeX con $...$ (en línea) o $$...$$ (bloque).
-- Sé preciso: si el material tiene errores, corrígelos con amabilidad.`;
+- Sé preciso: si el material tiene errores, corrígelos con amabilidad.
+- No uses emojis ni emoticonos en ninguna respuesta.`;
 const FOCUS_LABELS = { exam: 'Preparar un examen', homework: 'Deberes o trabajos', understand: 'Entender el material', review: 'Repaso general', memo: 'Memorizar', other: 'Otro' };
 /* =================== generation =================== */
 function subjectsList() { return [...new Set(ST.subjects.map((s) => s.name).concat(ST.sets.map((s) => s.subject), ST.exams.map((e) => e.subject), ST.homework.map((h) => h.subject)).filter(Boolean))]; }
@@ -1703,7 +1705,7 @@ Basa todo en el material. Si es una foto de pizarra o apuntes a mano, interpreta
   const content = [...sourcesBlocks(sources), { type: 'text', text: prompt }];
   const r = await ai({ system: SYS(), messages: [{ role: 'user', content }], schema: SCHEMA.set, max_tokens: 16000, ...opts });
   const set = {
-    id: uid(), title: title || r.title, color, focus, custom, subject: (r.subject || 'General').trim(), emoji: r.emoji || '📘', language: r.language || 'es-ES',
+    id: uid(), title: title || r.title, color, focus, custom, subject: (r.subject || 'General').trim(), language: r.language || 'es-ES',
     overview: r.overview, createdAt: Date.now(), lastOpenedAt: Date.now(), sources, chat: [],
     sections: (r.sections || []).map((s) => ({ id: uid(), title: s.title, topics: (s.topics || []).map((t) => ({ id: uid(), title: t.title, summary: t.summary, guide: t.guide, review: t.review, cards: [], quiz: [] })) })),
     mock: null, cheat: '', podcast: null,
@@ -2184,7 +2186,7 @@ function quizRunner(el, qs, { onAnswer, onDone, title = 'Quiz', review = false }
       ${q.topic ? `<span class="pill acc" style="margin-bottom:12px">${esc(q.topic)}</span>` : ''}
       <div class="qtext"><div class="md">${md(q.question)}</div></div>
       ${q.options.map((o, k) => `<button class="opt ${answered ? (k === q.answer ? 'ok' : k === q.picked ? 'no' : '') : ''}" data-k="${k}" ${answered ? 'disabled' : ''}><span class="k">${'ABCDEF'[k]}</span><div class="md grow">${md(o)}</div></button>`).join('')}
-      ${answered ? `<div class="expl"><b>${q.picked === q.answer ? '✅ ¡Correcto!' : '❌ No exactamente.'}</b><div class="md" style="margin-top:6px">${md(q.explanation)}</div></div><div class="row" style="justify-content:flex-end"><button class="btn btn-primary" id="next">${i + 1 < qs.length ? 'Siguiente' : 'Ver resultado'} ${ic('right')}</button></div>` : ''}</div>`;
+      ${answered ? `<div class="expl"><b>${q.picked === q.answer ? '¡Correcto!' : 'No exactamente.'}</b><div class="md" style="margin-top:6px">${md(q.explanation)}</div></div><div class="row" style="justify-content:flex-end"><button class="btn btn-primary" id="next">${i + 1 < qs.length ? 'Siguiente' : 'Ver resultado'} ${ic('right')}</button></div>` : ''}</div>`;
     $$('.opt', el).forEach((b) => (b.onclick = () => { q.picked = +b.dataset.k; logActivity(); onAnswer && onAnswer(q, q.picked === q.answer); draw(); }));
     const n = $('#next', el); if (n) { n.onclick = () => { i++; draw(); }; n.focus(); }
   };
@@ -2564,14 +2566,14 @@ function notifyDue() {
   for (const u of upcoming(1)) {
     const k = u.id + ':' + todayISO();
     if (sent[k]) continue;
-    try { new Notification(`${APP_NAME}: ${relDay(u.date)} — ${u.title}`, { body: u.type === 'exam' ? 'Abre la app: tu pack de estudio está listo.' : 'No te olvides 😉' }); } catch (e) {}
+    try { new Notification(`${APP_NAME}: ${relDay(u.date)} — ${u.title}`, { body: u.type === 'exam' ? 'Abre la app: tu pack de estudio está listo.' : 'No te olvides' }); } catch (e) {}
     sent[k] = 1;
   }
   try { localStorage.setItem('knowly.notified', JSON.stringify(sent)); } catch (e) {}
 }
 
 /* =================== composer (shared) =================== */
-function composer(el, { tools, tool, placeholder, button, onSubmit, extraFoot = '', minRows }) {
+function composer(el, { tools, tool, placeholder, button, onSubmit, onTool, extraFoot = '', minRows }) {
   let att = [];
   let cur = tool;
   const t = () => tools.find((x) => x.id === cur) || tools[0];
@@ -2600,7 +2602,7 @@ function composer(el, { tools, tool, placeholder, button, onSubmit, extraFoot = 
   comp.ondragleave = () => comp.classList.remove('drag');
   comp.ondrop = (e) => { e.preventDefault(); comp.classList.remove('drag'); add([...e.dataTransfer.files]); };
   $('#cmodel', el).onchange = (e) => { SETTINGS.model = e.target.value; saveSettings(); };
-  $$('[data-tool]', el).forEach((b) => (b.onclick = () => { cur = b.dataset.tool; $$('[data-tool]', el).forEach((x) => x.classList.toggle('on', x === b)); $('#ctag', el).textContent = t().label; ta.placeholder = t().placeholder; goBtn.textContent = t().button; ta.focus(); }));
+  $$('[data-tool]', el).forEach((b) => (b.onclick = () => { cur = b.dataset.tool; $$('[data-tool]', el).forEach((x) => x.classList.toggle('on', x === b)); $('#ctag', el).textContent = t().label; ta.placeholder = t().placeholder; goBtn.textContent = t().button; ta.focus(); onTool && onTool(cur); }));
   goBtn.onclick = () => onSubmit({ tool: cur, text: ta.value.trim(), sources: att });
   return { set(text, toolId) { if (toolId) $(`[data-tool="${toolId}"]`, el)?.click(); ta.value = text; refresh(); $('#cskills', el).innerHTML = skillPillsHTML(ta.value); ta.focus(); }, clear() { ta.value = ''; att = []; refresh(); } };
 }
@@ -2619,6 +2621,41 @@ const EXAMPLES = [
   { tag: 'química', title: 'Estructuras', q: 'Dibuja y explica la estructura del etanol (C₂H₅OH): tipos de enlace, grupo funcional y por qué se disuelve en agua.', art: `<svg viewBox="0 0 300 180"><rect x="10" y="10" width="280" height="160" rx="14" fill="var(--card)"/><g stroke="var(--text2)" stroke-width="2.5" fill="none"><path d="M70 110 L95 95 L120 110 L120 140 L95 155 L70 140 Z"/><path d="M76 113 L95 102 M114 113 L114 137 M76 137 L95 148"/><path d="M120 110 L150 92 L180 110"/><path d="M150 92 L150 62"/><path d="M180 110 L210 92 L240 110"/></g><text x="150" y="56" text-anchor="middle" font-size="16" fill="var(--text)">O</text><text x="185" y="126" font-size="16" fill="var(--text)">O</text><text x="214" y="86" font-size="11" fill="var(--muted)">C₂H₅</text></svg>` },
   { tag: 'contabilidad', title: 'Análisis financiero', q: 'Una empresa vende 500 unidades a 20 € con un coste de 14 € por unidad y gastos fijos de 1.800 €. Calcula el margen bruto, el beneficio y el punto de equilibrio.', art: `<svg viewBox="0 0 300 180"><rect x="10" y="10" width="280" height="160" rx="14" fill="var(--card)"/>${['Concepto', 'Ingresos', 'Costes', 'Margen', 'Fijos', 'Beneficio'].map((r, i) => `<rect x="22" y="${20 + i * 24}" width="256" height="22" rx="4" fill="${i === 0 ? 'var(--card3)' : i % 2 ? 'var(--card2)' : 'transparent'}"/><text x="30" y="${35 + i * 24}" font-size="10" fill="var(--text2)" font-weight="${i === 0 ? 700 : 400}">${r}</text>${['€', '10.000', '7.000', '3.000', '1.800', '1.200'].slice(i, i + 1).map((x) => `<text x="170" y="${35 + i * 24}" font-size="10" text-anchor="end" fill="var(--text)">${x}</text>`).join('')}${['%', '100%', '70%', '30%', '18%', '12%'].slice(i, i + 1).map((x) => `<rect x="${i === 3 ? 196 : 0}" y="${22 + i * 24}" width="${i === 3 ? 60 : 0}" height="18" rx="4" fill="var(--good-soft)"/><text x="250" y="${35 + i * 24}" font-size="10" text-anchor="end" fill="var(--text)">${x}</text>`).join('')}`).join('')}</svg>` },
 ];
+/* One typical, ready-to-use example per tool: click it and it runs, no typing. */
+const exSvg = (inner) => `<svg viewBox="0 0 300 180"><rect x="10" y="10" width="280" height="160" rx="14" fill="var(--card)"/>${inner}</svg>`;
+const exFlash = (f, b) => exSvg(`<rect x="62" y="42" width="190" height="98" rx="12" fill="var(--card3)" transform="rotate(5 157 91)"/><rect x="50" y="34" width="190" height="98" rx="12" fill="var(--card2)" stroke="var(--line2)"/><text x="145" y="80" text-anchor="middle" font-size="20" font-weight="700" fill="var(--text)">${f}</text><line x1="100" y1="94" x2="190" y2="94" stroke="var(--line2)"/><text x="145" y="118" text-anchor="middle" font-size="15" fill="var(--accent2)">${b}</text>`);
+const exQuiz = (q) => exSvg(`<text x="28" y="42" font-size="14" font-weight="700" fill="var(--text)">${q}</text>${[0, 1, 2].map((i) => `<rect x="28" y="${60 + i * 34}" width="244" height="26" rx="8" fill="${i === 1 ? 'var(--accent-soft2)' : 'var(--card2)'}" stroke="${i === 1 ? 'var(--accent2)' : 'var(--line2)'}"/><circle cx="44" cy="${73 + i * 34}" r="5" fill="${i === 1 ? 'var(--accent2)' : 'none'}" stroke="var(--text2)"/>`).join('')}`);
+const exGuide = (h) => exSvg(`<text x="28" y="40" font-size="16" font-weight="700" fill="var(--text)">${h}</text><rect x="28" y="52" width="60" height="4" rx="2" fill="var(--accent2)"/>${[0, 1, 2, 3].map((i) => `<circle cx="34" cy="${80 + i * 24}" r="3" fill="var(--accent2)"/><rect x="46" y="${76 + i * 24}" width="${[200, 170, 210, 120][i]}" height="8" rx="4" fill="var(--line2)"/>`).join('')}`);
+const exBoard = (h, d) => exSvg(`<rect x="22" y="22" width="256" height="136" rx="10" fill="var(--card2)"/><text x="38" y="52" font-size="16" font-weight="700" fill="var(--accent2)">${h}</text><path d="${d}" stroke="var(--text2)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M38 128 H150 M38 142 H110" stroke="var(--line2)" stroke-width="3" stroke-linecap="round"/>`);
+const EXAMPLES_BY_TOOL = {
+  solver: null,   // filled below with EXAMPLES
+  board: [
+    { tag: 'matemáticas', title: 'Teorema de Pitágoras', q: 'Explícame el teorema de Pitágoras con un ejemplo', art: exBoard('a² + b² = c²', 'M190 60 L190 130 L90 130 Z M190 118 H178 V130') },
+    { tag: 'biología', title: 'La fotosíntesis', q: 'Explícame la fotosíntesis paso a paso', art: exBoard('Fotosíntesis', 'M200 70 a18 18 0 1 1 0 .1 M200 100 V130 M200 112 q-16 -4 -22 -18 M200 118 q16 -4 22 -18') },
+    { tag: 'matemáticas', title: 'Ecuaciones de primer grado', q: 'Enséñame a resolver ecuaciones de primer grado con 3 ejemplos', art: exBoard('2x + 4 = 10', 'M170 90 H250 M210 70 V110 M165 130 H255') },
+    { tag: 'historia', title: 'La Revolución Francesa', q: 'Explícame las causas y consecuencias de la Revolución Francesa', art: exBoard('1789', 'M60 108 H250 M80 100 V116 M130 100 V116 M180 100 V116 M230 100 V116') },
+  ],
+  flash: [
+    { tag: 'inglés', title: 'Vocabulario de inglés', q: 'Crea flashcards de vocabulario de inglés sobre la casa y los muebles: 20 palabras con su traducción y una frase de ejemplo', art: exFlash('kitchen', 'cocina') },
+    { tag: 'alemán', title: 'Vocabulario de alemán A1', q: 'Crea flashcards de vocabulario de alemán nivel A1 (saludos, números, familia) con el artículo y su traducción', art: exFlash('der Hund', 'el perro') },
+    { tag: 'geografía', title: 'Capitales de Europa', q: 'Crea flashcards con los países de Europa y sus capitales', art: exFlash('Portugal', 'Lisboa') },
+    { tag: 'química', title: 'Elementos de la tabla periódica', q: 'Crea flashcards de los 30 primeros elementos de la tabla periódica: símbolo, nombre y número atómico', art: exFlash('Na', 'Sodio · 11') },
+  ],
+  quiz: [
+    { tag: 'matemáticas', title: 'Fracciones', q: 'Crea un quiz de fracciones: suma, resta, multiplicación y simplificación', art: exQuiz('¿Cuánto es 1/2 + 1/3?') },
+    { tag: 'historia', title: 'Revolución Francesa', q: 'Crea un quiz sobre la Revolución Francesa', art: exQuiz('¿En qué año empezó?') },
+    { tag: 'biología', title: 'La célula', q: 'Crea un quiz sobre la célula: orgánulos y sus funciones', art: exQuiz('¿Qué orgánulo produce ATP?') },
+    { tag: 'inglés', title: 'Verbos irregulares', q: 'Crea un quiz de verbos irregulares en inglés (pasado y participio)', art: exQuiz('Past simple de «go»') },
+  ],
+  guide: [
+    { tag: 'biología', title: 'La célula', q: 'Hazme una guía de estudio sobre la célula: tipos, orgánulos y funciones', art: exGuide('La célula') },
+    { tag: 'matemáticas', title: 'Ecuaciones de segundo grado', q: 'Hazme una guía de estudio sobre las ecuaciones de segundo grado con fórmula, discriminante y ejemplos resueltos', art: exGuide('Ecuaciones de 2º grado') },
+    { tag: 'historia', title: 'Segunda Guerra Mundial', q: 'Hazme una guía de estudio sobre la Segunda Guerra Mundial: causas, fases y consecuencias', art: exGuide('La Segunda Guerra Mundial') },
+    { tag: 'física', title: 'Leyes de Newton', q: 'Hazme una guía de estudio sobre las leyes de Newton con fórmulas y ejemplos', art: exGuide('Leyes de Newton') },
+  ],
+};
+EXAMPLES_BY_TOOL.solver = EXAMPLES;
+const EX_TITLE = { solver: 'Ejemplos del Solver', board: 'Ejemplos de la Pizarra', flash: 'Ejemplos de Flashcards', quiz: 'Ejemplos de Quiz', guide: 'Ejemplos de Guía de estudio' };
 function pageHome(v, _, q) {
   const mode = q.m || 'study';
   v.innerHTML = `<div class="page">
@@ -2635,10 +2672,18 @@ function pageHome(v, _, q) {
   $('#hist', v).onclick = openHistory;
   const body = $('#hbody', v);
   if (mode === 'study') {
-    body.innerHTML = `<div id="comp-wrap"></div><h2 class="sec-title" style="max-width:1360px;margin-left:auto;margin-right:auto">Ejemplos del Solver</h2><div class="examples" style="max-width:1360px;margin:0 auto">${EXAMPLES.map((e, k) => `<button class="card ex-card spot" data-ex="${k}"><div class="ex-art">${e.art}</div><h4>${e.title}</h4><span class="pill tag-${k}">${e.tag}</span></button>`).join('')}</div>`;
-    const c = composer($('#comp-wrap', body), { tools: HOME_TOOLS, tool: q.tool || 'solver', onSubmit: homeSubmit });
+    body.innerHTML = `<div id="comp-wrap"></div><h2 class="sec-title" id="extitle" style="max-width:1360px;margin-left:auto;margin-right:auto"></h2><div class="examples" id="exgrid" style="max-width:1360px;margin:0 auto"></div>`;
+    let curTool = q.tool || 'solver';
+    const drawEx = () => {
+      const list = EXAMPLES_BY_TOOL[curTool] || EXAMPLES;
+      $('#extitle', body).textContent = EX_TITLE[curTool] || 'Ejemplos';
+      $('#exgrid', body).innerHTML = list.map((e, k) => `<button class="card ex-card spot" data-ex="${k}" title="Probar este ejemplo"><div class="ex-art">${e.art}</div><h4>${e.title}</h4><span class="pill tag-${k % 4}">${e.tag}</span></button>`).join('');
+      // one click runs the example with the selected tool
+      $$('[data-ex]', body).forEach((b) => (b.onclick = () => { const e = list[+b.dataset.ex]; homeSubmit({ tool: curTool, text: e.q, sources: [] }); }));
+    };
+    const c = composer($('#comp-wrap', body), { tools: HOME_TOOLS, tool: curTool, onSubmit: homeSubmit, onTool: (t) => { curTool = t; drawEx(); } });
     if (q.skill) c.set('/' + q.skill + ' ', q.tool || 'solver');
-    $$('[data-ex]', body).forEach((b) => (b.onclick = () => { c.set(EXAMPLES[+b.dataset.ex].q, 'solver'); $('#main').scrollTo({ top: 0, behavior: 'smooth' }); }));
+    drawEx();
   } else if (mode === 'exam') {
     body.innerHTML = `<div id="comp-wrap"></div><div class="sec-head" style="max-width:1360px;margin-left:auto;margin-right:auto"><h2 class="sec-title">Qué incluye tu plan de examen</h2><span class="muted">Planifica, practica y sigue tu progreso.</span></div>
       <div class="feat-grid" style="max-width:1360px;margin:0 auto">
@@ -2698,7 +2743,7 @@ async function pageSolve(v, id) {
     <div class="follow no-print"><input class="inp" id="fq" placeholder="¿Algo no está claro? Pregunta sobre esta solución…"><button class="btn btn-primary" id="fgo">${ic('send')}</button></div></div></div>`;
   const ans = $('#ans', v);
   const hskills = skillsByIds(h.skillIds);
-  if (hskills.length) $('.q-card', v).insertAdjacentHTML('afterbegin', `<div class="active-skills" style="margin:0 0 10px">${hskills.map((s) => `<span class="skill-pill">${ic('slash')} ${esc(s.emoji || '')} ${esc(s.name)}</span>`).join('')}</div>`);
+  if (hskills.length) $('.q-card', v).insertAdjacentHTML('afterbegin', `<div class="active-skills" style="margin:0 0 10px">${hskills.map((s) => `<span class="skill-pill">${ic('slash')} ${esc(s.name)}</span>`).join('')}</div>`);
   const ctrl = new AbortController(); CLEANUP.push(() => ctrl.abort());
   const baseMsgs = () => [{ role: 'user', content: [...sourcesBlocks(h.sources, true), { type: 'text', text: h.question || 'Resuelve lo que aparece en el archivo.' }] }];
   const SOLVE_SYS = SYS() + `\nAhora actúas como Solver. Formato OBLIGATORIO:
@@ -2746,7 +2791,7 @@ async function pageBoard(v, id) {
   v.innerHTML = `<div class="page"><div class="row between no-print" style="max-width:1180px;margin:0 auto 18px"><a class="back" href="#/?tool=board">${ic('left')} Volver</a><div class="row"><button class="btn btn-ghost btn-sm" id="regen">${ic('refresh')} Rehacer</button><button class="btn btn-ghost btn-sm" onclick="print()">${ic('print')} Imprimir</button></div></div><div id="bwrap"></div></div>`;
   const wrap = $('#bwrap', v);
   const make = async () => {
-    wrap.innerHTML = `<div class="board-wrap"><div class="paper"><h2>Preparando la clase…</h2><p style="font-size:24px" id="bprog">El profe está pensando cómo explicártelo ✏️</p></div></div>`;
+    wrap.innerHTML = `<div class="board-wrap"><div class="paper"><h2>Preparando la clase…</h2><p style="font-size:24px" id="bprog">El profe está pensando cómo explicártelo</p></div></div>`;
     const ctrl = new AbortController(); CLEANUP.push(() => ctrl.abort());
     try {
       h.board = await genBoard([...sourcesBlocks(h.sources), { type: 'text', text: h.question ? `Tema o pregunta: ${h.question}` : 'Explica el contenido del archivo.' }], { skills: skillsByIds(h.skillIds), signal: ctrl.signal, onText: (t) => { const p = $('#bprog', v); if (p) p.textContent = `Escribiendo la clase… (${t.length.toLocaleString('es')} caracteres)`; } });
@@ -2776,7 +2821,7 @@ function pageStudy(v, _, q) {
   v.innerHTML = `<div class="page narrow">
     <div id="rem">${remindersHTML()}</div>
     ${last ? `<h2 class="sec-title" style="margin-top:0">Continúa donde lo dejaste</h2>
-    <div class="hub-top"><div class="card jump"><div class="grow"><h3>${esc(last.emoji || '')} ${esc(last.title)}</h3><div class="meta"><span>${ic('cards')} ${setCounts(last).cards} flashcards</span><span>${ic('list')} ${setCounts(last).quiz} preguntas</span><span class="grow"></span><span>${setMastery(last)}% dominado</span></div><div class="bar"><i style="width:${setMastery(last)}%"></i></div></div><a class="btn btn-primary btn-lg" href="#/set/${last.id}">Seguir aprendiendo</a></div>${reviewCardHTML()}</div>` : `<div class="card jump"><div class="grow"><h3>Empieza tu primer set de estudio</h3><p class="muted" style="margin:0;font-size:16px">Sube fotos de la pizarra, del libro o tus apuntes. ${APP_NAME} los organiza por materia y te prepara guías, flashcards, quizzes y más.</p></div><button class="btn btn-primary btn-lg" id="first">${ic('plus')} Crear set</button></div>`}
+    <div class="hub-top"><div class="card jump"><div class="grow"><h3>${esc(last.title)}</h3><div class="meta"><span>${ic('cards')} ${setCounts(last).cards} flashcards</span><span>${ic('list')} ${setCounts(last).quiz} preguntas</span><span class="grow"></span><span>${setMastery(last)}% dominado</span></div><div class="bar"><i style="width:${setMastery(last)}%"></i></div></div><a class="btn btn-primary btn-lg" href="#/set/${last.id}">Seguir aprendiendo</a></div>${reviewCardHTML()}</div>` : `<div class="card jump"><div class="grow"><h3>Empieza tu primer set de estudio</h3><p class="muted" style="margin:0;font-size:16px">Sube fotos de la pizarra, del libro o tus apuntes. ${APP_NAME} los organiza por materia y te prepara guías, flashcards, quizzes y más.</p></div><button class="btn btn-primary btn-lg" id="first">${ic('plus')} Crear set</button></div>`}
     <h2 class="sec-title">Herramientas rápidas</h2>
     <div class="qtools">${QUICK.map((t) => `<button class="qt" data-qt="${t.id}" style="background:${t.color}"><div><h3>${t.label}</h3><p>${t.desc}</p></div><div class="qt-art" style="color:${t.color}">${ic(t.icon)}</div></button>`).join('')}</div>
     <div class="sec-head"><h2 class="sec-title">Tus sets de estudio</h2>${shown.length > 3 ? `<span class="muted">${shown.length} sets</span>` : ''}</div>
@@ -2799,7 +2844,7 @@ function reviewCardHTML() {
 }
 function setCardHTML(s) {
   const c = setCounts(s), m = setMastery(s);
-  return `<a class="card set-card spot" href="#/set/${s.id}"><span class="emoji" style="background:${s.color}26">${esc(s.emoji || '📘')}</span><h3>${esc(s.title)}</h3><div class="sub"><span class="pill" style="background:${s.color}22;color:${s.color}">${esc(s.subject)}</span><span>${timeAgo(s.createdAt)}</span></div><div class="foot"><div class="bar"><i style="width:${m}%"></i></div><span>${c.topics} temas</span><span>${c.cards} tarjetas</span><span class="grow"></span><span>${m}%</span></div></a>`;
+  return `<a class="card set-card spot" href="#/set/${s.id}"><h3>${esc(s.title)}</h3><div class="sub"><span class="pill" style="background:${s.color}22;color:${s.color}">${esc(s.subject)}</span><span>${timeAgo(s.createdAt)}</span></div><div class="foot"><div class="bar"><i style="width:${m}%"></i></div><span>${c.topics} temas</span><span>${c.cards} tarjetas</span><span class="grow"></span><span>${m}%</span></div></a>`;
 }
 
 /* =================== CREATE SET FLOW =================== */
@@ -2859,7 +2904,7 @@ function pageSet(v, id, q) {
     const stats = ts.map((t) => topicStats(t).status);
     const cnt = { all: ts.length, review: stats.filter((s) => s === 'review').length, mastered: stats.filter((s) => s === 'mastered').length, new: stats.filter((s) => s === 'new').length };
     left.innerHTML = `<div class="row between"><a class="back" href="#/study">${ic('left')} Atrás</a><div class="row" style="gap:2px"><button class="icon-btn" id="ren" title="Renombrar">${ic('edit')}</button><button class="icon-btn" id="del" title="Borrar set">${ic('trash')}</button></div></div>
-      <h1>${esc(set.emoji || '')} ${esc(set.title)}</h1>
+      <h1>${esc(set.title)}</h1>
       <div class="tabs"><button class="${st.left === 'topics' ? 'on' : ''}" data-l="topics">Temas</button><button class="${st.left === 'sources' ? 'on' : ''}" data-l="sources">Fuentes</button></div>
       ${st.left === 'topics' ? `<div class="filters">${[['all', 'Todos'], ['review', 'A repasar'], ['mastered', 'Dominados'], ['new', 'Sin empezar']].map(([k, l]) => `<button class="${st.filter === k ? 'on' : ''}" data-f="${k}">${l}<span class="count">${cnt[k]}</span></button>`).join('')}</div>
       <button class="side-item ${st.view === 'overview' ? 'on' : ''}" data-v="overview">${ic('layers')} Resumen general</button>
@@ -2885,7 +2930,7 @@ function pageSet(v, id, q) {
     const t = topic();
     if (st.view === 'overview') {
       const c = setCounts(set);
-      center.innerHTML = `<div class="topic-head"><div class="grow"><span class="pill" style="background:${set.color}22;color:${set.color};margin-bottom:12px">${esc(set.subject)}</span><h2>${esc(set.emoji || '')} ${esc(set.title)}</h2><p class="muted">${c.topics} temas · ${c.cards} flashcards · ${c.quiz} preguntas</p></div>${ring(setMastery(set))}</div>
+      center.innerHTML = `<div class="topic-head"><div class="grow"><span class="pill" style="background:${set.color}22;color:${set.color};margin-bottom:12px">${esc(set.subject)}</span><h2>${esc(set.title)}</h2><p class="muted">${c.topics} temas · ${c.cards} flashcards · ${c.quiz} preguntas</p></div>${ring(setMastery(set))}</div>
         <div class="guide-box"><div class="md">${md(set.overview)}</div></div>
         <h2 style="font-size:24px;margin-bottom:16px">Aprende a tu manera</h2>
         <div class="practice">
@@ -3261,7 +3306,7 @@ function pageHw(v, id, q) {
   const busyBtn = (b, label = 'Preparando…') => { b.disabled = true; b.innerHTML = `<span class="spin"></span> ${label}`; };
   const syncDone = async () => {
     const all = hw.tasks.length && hw.tasks.every((t) => t.done);
-    if (all && !hw.done) { hw.done = true; confetti(); toast('¡Deberes terminados! 🎉'); logActivity(2); }
+    if (all && !hw.done) { hw.done = true; confetti(); toast('¡Deberes terminados!'); logActivity(2); }
     if (!all) hw.done = false;
     const ev = hw.eventId && byId('events', hw.eventId); if (ev && ev.type === 'homework') { ev.done = !!hw.done; await save('events', ev); }
     await persist();
@@ -3316,7 +3361,7 @@ function pageHw(v, id, q) {
     });
     set('mkvoc', async () => {
       const cards = hw.vocab.map((x) => ({ id: uid(), front: x.term, back: `${x.translation}${x.example ? '\n\n_' + x.example + '_' : ''}`, known: null }));
-      const s2 = { id: uid(), title: `Vocabulario · ${hw.title}`, color: SET_COLORS[ST.sets.length % SET_COLORS.length], focus: ['memo'], custom: '', subject: hw.subject || 'Idiomas', emoji: '🔤', language: lang, overview: `Vocabulario de **${hw.title}**.`, createdAt: Date.now(), lastOpenedAt: Date.now(), sources: [], chat: [], mock: null, cheat: '', podcast: null, sections: [{ id: uid(), title: 'Vocabulario', topics: [{ id: uid(), title: 'Palabras clave', summary: `${cards.length} palabras de los deberes`, guide: hw.vocab.map((x) => `- **${x.term}** — ${x.translation}${x.example ? `  \n  _${x.example}_` : ''}`).join('\n'), review: '', cards, quiz: [] }] }] };
+      const s2 = { id: uid(), title: `Vocabulario · ${hw.title}`, color: SET_COLORS[ST.sets.length % SET_COLORS.length], focus: ['memo'], custom: '', subject: hw.subject || 'Idiomas', language: lang, overview: `Vocabulario de **${hw.title}**.`, createdAt: Date.now(), lastOpenedAt: Date.now(), sources: [], chat: [], mock: null, cheat: '', podcast: null, sections: [{ id: uid(), title: 'Vocabulario', topics: [{ id: uid(), title: 'Palabras clave', summary: `${cards.length} palabras de los deberes`, guide: hw.vocab.map((x) => `- **${x.term}** — ${x.translation}${x.example ? `  \n  _${x.example}_` : ''}`).join('\n'), review: '', cards, quiz: [] }] }] };
       await save('sets', s2); go('/set/' + s2.id);
     });
   };
@@ -3582,7 +3627,7 @@ function openGenerate(items, what) {
   const subj = [...new Set(items.map((i) => i.subject).filter(Boolean))].join(' + ') || 'Mochila';
   const title = { exercises: 'Generar ejercicios', review: 'Repasar estos apuntes' }[what];
   const m = openModal(`<h2>${title}</h2><p class="lead">A partir de ${items.length} ${items.length === 1 ? 'archivo' : 'archivos'} de ${esc(subj)}.</p>
-    ${what === 'exercises' ? `<div class="row wrap" style="gap:14px"><div style="width:130px"><label class="lbl" style="margin-top:0">Cuántos</label><select class="inp" id="gn">${[3, 5, 8, 10].map((n) => `<option ${n === 5 ? 'selected' : ''}>${n}</option>`).join('')}</select></div><div style="width:150px"><label class="lbl" style="margin-top:0">Nivel</label><select class="inp" id="gl"><option>fácil</option><option selected>medio</option><option>difícil</option><option>tipo examen</option></select></div><div class="grow"><label class="lbl" style="margin-top:0">Con mi skill (opcional)</label><select class="inp" id="gs"><option value="">Sin skill</option>${ST.skills.map((s) => `<option value="${s.id}">${esc(s.emoji || '')} /${esc(s.slug)}</option>`).join('')}</select></div></div>` : ''}
+    ${what === 'exercises' ? `<div class="row wrap" style="gap:14px"><div style="width:130px"><label class="lbl" style="margin-top:0">Cuántos</label><select class="inp" id="gn">${[3, 5, 8, 10].map((n) => `<option ${n === 5 ? 'selected' : ''}>${n}</option>`).join('')}</select></div><div style="width:150px"><label class="lbl" style="margin-top:0">Nivel</label><select class="inp" id="gl"><option>fácil</option><option selected>medio</option><option>difícil</option><option>tipo examen</option></select></div><div class="grow"><label class="lbl" style="margin-top:0">Con mi skill (opcional)</label><select class="inp" id="gs"><option value="">Sin skill</option>${ST.skills.map((s) => `<option value="${s.id}">/${esc(s.slug)}</option>`).join('')}</select></div></div>` : ''}
     <label class="lbl">Algo concreto (opcional)</label><input class="inp" id="gt" placeholder="${what === 'exercises' ? 'Ej: solo de fracciones, con problemas de la vida real' : 'Ej: céntrate en las fórmulas'}">
     <div class="row" style="justify-content:flex-end;margin-top:22px"><button class="btn btn-primary btn-lg" id="ggo">${ic('spark')} Crear</button></div><div id="gout"></div>`, { cls: 'mid' });
   const el = m.el;
@@ -3610,7 +3655,7 @@ function pageBackpack(v, _, q) {
   const subjectsAll = () => [...new Set([...ST.subjects.map((s) => s.name), ...ST.items.map((i) => i.subject).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'es'));
   v.innerHTML = `<div class="page bp-page">
     <div class="hero"><div class="grow"><h1>Mochila<span>Tíralo todo aquí. Knowly lo ordena.</span></h1><p>Suelta hasta ${BP_MAX} capturas de la pizarra, fotos del libro, ejercicios, deberes o exámenes. Knowly lee cada uno, lo clasifica por clase y por tipo (explicación, ejercicios, deberes, examen…) y guarda el texto para que luego repases, practiques o prepares un examen.</p></div></div>
-    <div class="drop bp-drop" id="bpdrop"><div class="drop-art"><div style="background:#f0b03a;transform:rotate(-12deg)">${ic('img')}</div><div style="background:#4f8bff;transform:rotate(-5deg)">${ic('board')}</div><div style="background:#a06cf5;z-index:1">${ic('backpack')}</div><div style="background:#f2625d;transform:rotate(5deg)">PDF</div><div style="background:#2fb86b;transform:rotate(12deg)">${ic('hw')}</div></div><h3>Arrastra aquí tus capturas y archivos</h3><p class="muted">O pega con ⌘V / Ctrl+V. Se clasifican solos en segundo plano.</p><div class="row" style="justify-content:center;gap:10px;margin-top:8px;flex-wrap:wrap"><label class="btn btn-primary">${ic('upload')} Elegir archivos<input type="file" multiple accept="image/*,application/pdf,.txt,.md,.docx,.pptx" hidden id="bpin"></label><label class="btn btn-ghost">${ic('camera')} Hacer foto<input type="file" accept="image/*" capture="environment" hidden id="bpcam"></label><button class="btn btn-ghost" id="bplink">${ic('link')} Desde enlace o vídeo</button></div></div>
+    <div class="drop bp-drop" id="bpdrop"><div class="drop-art"><div style="background:#f0b03a;transform:rotate(-12deg)">${ic('img')}</div><div style="background:#4f8bff;transform:rotate(-5deg)">${ic('board')}</div><div style="background:#a06cf5;z-index:1">${ic('backpack')}</div><div style="background:#f2625d;transform:rotate(5deg)">PDF</div><div style="background:#2fb86b;transform:rotate(12deg)">${ic('hw')}</div></div><h3>Arrastra aquí tus capturas, archivos o texto</h3><p class="muted">También puedes pegar con ⌘V / Ctrl+V, imágenes o texto. Se clasifican solos en segundo plano.</p><div class="row" style="justify-content:center;gap:10px;margin-top:8px;flex-wrap:wrap"><label class="btn btn-primary">${ic('upload')} Elegir archivos<input type="file" multiple accept="image/*,application/pdf,.txt,.md,.docx,.pptx" hidden id="bpin"></label><label class="btn btn-ghost">${ic('camera')} Hacer foto<input type="file" accept="image/*" capture="environment" hidden id="bpcam"></label><button class="btn btn-ghost" id="bptext">${ic('text')} Escribir o pegar texto</button><button class="btn btn-ghost" id="bplink">${ic('link')} Desde enlace o vídeo</button></div></div>
     <div id="bpsort"></div>
     <div class="bp-layout"><aside class="bp-side" id="bpside"></aside><section class="bp-main"><div id="bpkinds" class="seg2 bp-kinds"></div><div id="bpgrid"></div></section></div>
     <div class="bp-bar hidden" id="bpbar"></div></div>`;
@@ -3705,13 +3750,23 @@ function pageBackpack(v, _, q) {
   d.ondrop = (e) => { e.preventDefault(); d.classList.remove('drag'); addToBackpack(e.dataTransfer.files); };
   $('#bpin', v).onchange = (e) => { addToBackpack(e.target.files); e.target.value = ''; };
   $('#bpcam', v).onchange = (e) => { addToBackpack(e.target.files); e.target.value = ''; };
-  function onPaste(e) { const f = [...(e.clipboardData ? e.clipboardData.files : [])]; if (f.length && !$('.overlay')) { e.preventDefault(); addToBackpack(f); } }
+  function onPaste(e) {
+    if ($('.overlay')) return;
+    const f = [...(e.clipboardData ? e.clipboardData.files : [])];
+    if (f.length) { e.preventDefault(); return addToBackpack(f); }
+    const t = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+    const tg = e.target, typing = tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName));
+    if (!typing && t && t.trim().length >= 20) { e.preventDefault(); addToBackpack([], [{ id: uid(), kind: 'text', name: 'Texto pegado · ' + t.trim().slice(0, 40).replace(/\s+/g, ' '), mime: 'text/plain', data: t.trim() }]); toast('Texto añadido: se está clasificando'); }
+  }
   document.addEventListener('paste', onPaste);
-  $('#bplink', v).onclick = () => {
+  const addModal = (tabs) => {
     const m = openModal(`<h2>Añadir a la mochila</h2><div id="lbox"></div><div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" id="lgo" disabled>Añadir y clasificar</button></div>`, { cls: 'wide' });
-    const box = sourceBox($('#lbox', m.el), { tabs: ['youtube', 'video', 'drive', 'web', 'text'], hint: false, onChange: (s) => { $('#lgo', m.el).disabled = !s.length; } });
-    $('#lgo', m.el).onclick = () => { const s = box.get(); m.close(); addToBackpack([], s); };
+    const box = sourceBox($('#lbox', m.el), { tabs, hint: false, onChange: (s) => { $('#lgo', m.el).disabled = !s.length; } });
+    m.el.addEventListener('input', (e) => { if (e.target.id === 'tin') $('#lgo', m.el).disabled = !(e.target.value.trim() || box.count()); });
+    $('#lgo', m.el).onclick = () => { const pend = $('#tin', m.el); if (pend && pend.value.trim()) $('#tadd', m.el).click(); const s = box.get(); m.close(); addToBackpack([], s); };
   };
+  $('#bptext', v).onclick = () => addModal(['text', 'youtube', 'video', 'drive', 'web']);
+  $('#bplink', v).onclick = () => addModal(['youtube', 'video', 'drive', 'web', 'text']);
   draw();
 }
 /* =================== EXAMS =================== */
@@ -3785,7 +3840,7 @@ function pageExam(v, id, q) {
       const doneN = e.plan.reduce((a, p) => a + p.tasks.filter((t) => t.done).length, 0), totN = e.plan.reduce((a, p) => a + p.tasks.length, 0);
       b.innerHTML = `<div class="card" style="padding:26px 30px"><div class="row between wrap"><h3 style="font-size:21px">${ic('cal')} Plan de ${e.plan.length} días</h3><span class="muted">${doneN}/${totN} tareas hechas</span></div>
         <div class="week">${DOW.map((x) => `<div class="muted" style="text-align:center;font-size:12px;font-weight:600">${x}</div>`).join('')}${days.map((ds) => { const p = e.plan.find((x) => x.date === ds); return `<button class="wday ${ds === todayISO() ? 'today' : ''} ${ds === sel ? 'sel' : ''} ${ds === e.date ? 'exam' : ''} ${ds < todayISO() ? 'past' : ''}" data-d="${ds}"><small>${ds === e.date ? 'EXAMEN' : MONTHS[parseISO(ds).getMonth()].slice(0, 3)}</small><b>${parseISO(ds).getDate()}</b><div class="dots">${p ? p.tasks.map((t) => `<i style="${t.done ? 'opacity:.3' : ''}"></i>`).join('') : ''}</div></button>`; }).join('')}</div>
-        <h3 style="font-size:18px;margin-bottom:12px">${sel === e.date ? '🎯 Día del examen' : `${relDay(sel)} · ${fmtDate(sel, true)}`}</h3>
+        <h3 style="font-size:18px;margin-bottom:12px">${sel === e.date ? 'Día del examen' : `${relDay(sel)} · ${fmtDate(sel, true)}`}</h3>
         ${dayPlan ? dayPlan.tasks.map((t, k) => `<label class="task ${t.done ? 'done' : ''}"><span class="check"><input type="checkbox" data-k="${k}" ${t.done ? 'checked' : ''}></span><span class="grow">${esc(t.text)}</span></label>`).join('') : `<p class="muted">${sel === e.date ? '¡Mucha suerte! Duerme bien y repasa la chuleta.' : 'Nada planificado para este día.'}</p>`}</div>`;
       $$('[data-d]', b).forEach((x) => (x.onclick = () => { sel = x.dataset.d; draw(); }));
       $$('[data-k]', b).forEach((x) => (x.onchange = () => { dayPlan.tasks[+x.dataset.k].done = x.checked; persist(); draw(); }));
@@ -3963,7 +4018,7 @@ function slashAssist(input, onChange) {
     box.style.left = Math.max(8, Math.min(r.left, innerWidth - 430)) + 'px';
     box.style.top = up ? '' : r.bottom + 6 + 'px';
     box.style.bottom = up ? innerHeight - r.top + 6 + 'px' : '';
-    box.innerHTML = `<div class="head">Skills</div>${items.length ? items.map((s, k) => `<button class="it ${k === idx ? 'on' : ''}" data-k="${k}"><span class="sk-ico">${esc(s.emoji || '✨')}</span><span class="grow"><b>/${esc(s.slug)}</b><small>${esc(s.description || s.name)}</small></span></button>`).join('') : ''}<button class="it" data-new><span class="sk-ico" style="background:var(--card3);color:var(--text)">${ic('plus')}</span><span class="grow"><b>Crear skill</b><small>Enséñale a ${APP_NAME} cómo quieres las cosas</small></span></button>`;
+    box.innerHTML = `<div class="head">Skills</div>${items.length ? items.map((s, k) => `<button class="it ${k === idx ? 'on' : ''}" data-k="${k}"><span class="sk-ico">${ic('slash')}</span><span class="grow"><b>/${esc(s.slug)}</b><small>${esc(s.description || s.name)}</small></span></button>`).join('') : ''}<button class="it" data-new><span class="sk-ico" style="background:var(--card3);color:var(--text)">${ic('plus')}</span><span class="grow"><b>Crear skill</b><small>Enséñale a ${APP_NAME} cómo quieres las cosas</small></span></button>`;
     $$('[data-k]', box).forEach((b) => b.addEventListener('mousedown', (e) => { e.preventDefault(); pick(items[+b.dataset.k]); }));
     $('[data-new]', box).addEventListener('mousedown', (e) => { e.preventDefault(); pick(null); });
   };
@@ -3979,7 +4034,7 @@ function slashAssist(input, onChange) {
 function skillPillsHTML(text) {
   const found = [];
   String(text || '').replace(/(^|\s)\/([a-z0-9][a-z0-9-]*)/gi, (m, p, slug) => { const s = ST.skills.find((k) => k.slug === slug.toLowerCase()); if (s && !found.includes(s)) found.push(s); });
-  return found.map((s) => `<span class="skill-pill">${ic('slash')} ${esc(s.emoji || '')} ${esc(s.name)}</span>`).join('');
+  return found.map((s) => `<span class="skill-pill">${ic('slash')} ${esc(s.name)}</span>`).join('');
 }
 
 /* =================== handwriting (Apple Pencil / dedo / ratón) =================== */
@@ -4083,20 +4138,20 @@ function pageReview(v) {
 
 /* =================== SKILLS =================== */
 const SKILL_TEMPLATES = [
-  { emoji: '🧮', name: 'Como en clase', slug: 'como-clase', description: 'Resuelve con el método de mi profe', instructions: 'Resuelve y explica los ejercicios exactamente como en el material de mi profe: mismos pasos, misma notación y misma forma de presentar el resultado final.' },
-  { emoji: '🗂️', name: 'Vocabulario', slug: 'vocab', description: 'Tarjetas de idiomas completas', instructions: 'Cuando te pase vocabulario, crea tarjetas: palabra en el idioma → traducción, género/plural si aplica, un ejemplo corto y un truco para recordarla.' },
-  { emoji: '✍️', name: 'Comentario de texto', slug: 'comentario', description: 'Con la estructura de mi profesora', instructions: 'Haz los comentarios de texto con esta estructura: tema, resumen, estructura, análisis del contenido y la forma, y valoración crítica. Lenguaje formal, sin primera persona.' },
-  { emoji: '🧒', name: 'Explícamelo fácil', slug: 'facil', description: 'Analogías y mini-test', instructions: 'Explica todo como si tuviera 12 años, con analogías de la vida diaria, frases cortas y un mini-test de 3 preguntas al final.' },
+  { name: 'Como en clase', slug: 'como-clase', description: 'Resuelve con el método de mi profe', instructions: 'Resuelve y explica los ejercicios exactamente como en el material de mi profe: mismos pasos, misma notación y misma forma de presentar el resultado final.' },
+  { name: 'Vocabulario', slug: 'vocab', description: 'Tarjetas de idiomas completas', instructions: 'Cuando te pase vocabulario, crea tarjetas: palabra en el idioma → traducción, género/plural si aplica, un ejemplo corto y un truco para recordarla.' },
+  { name: 'Comentario de texto', slug: 'comentario', description: 'Con la estructura de mi profesora', instructions: 'Haz los comentarios de texto con esta estructura: tema, resumen, estructura, análisis del contenido y la forma, y valoración crítica. Lenguaje formal, sin primera persona.' },
+  { name: 'Explícamelo fácil', slug: 'facil', description: 'Analogías y mini-test', instructions: 'Explica todo como si tuviera 12 años, con analogías de la vida diaria, frases cortas y un mini-test de 3 preguntas al final.' },
 ];
 function uniqueSlug(base, selfId) { let s = slugify(base), k = 2; while (ST.skills.some((x) => x.slug === s && x.id !== selfId)) s = slugify(base) + '-' + k++; return s; }
 function skillForm(skill, pre = {}) {
   const isNew = !skill;
-  const sk = skill || { id: uid(), name: '', slug: '', emoji: '✨', description: '', instructions: '', guide: '', sources: [], outputs: [], createdAt: Date.now(), uses: 0 };
+  const sk = skill || { id: uid(), name: '', slug: '', description: '', instructions: '', guide: '', sources: [], outputs: [], createdAt: Date.now(), uses: 0 };
   let srcs = [...sk.sources, ...(pre.sources || [])]; let slugTouched = !isNew;
   if (isNew && pre.name) sk.name = pre.name;
   const m = openModal(`<h2>${isNew ? 'Nueva skill' : 'Editar skill'}</h2><p class="lead">Una skill le enseña a ${APP_NAME} cómo quieres algo: con tu método, tu formato o el de tu profe. Luego la usas escribiendo <b>/nombre</b> en cualquier sitio.</p>
-    ${isNew ? `<div class="tpl-row">${SKILL_TEMPLATES.map((t, k) => `<button class="tpl" data-tpl="${k}"><b>${t.emoji} ${t.name}</b><small>${t.description}</small></button>`).join('')}</div>` : ''}
-    <div class="row" style="gap:12px;align-items:flex-end"><div style="width:76px"><label class="lbl">Icono</label><input class="inp" id="kemo" maxlength="4" value="${esc(sk.emoji)}" style="text-align:center;font-size:20px"></div><div class="grow"><label class="lbl">Nombre</label><input class="inp" id="kname" value="${esc(sk.name)}" placeholder="Ej: Ecuaciones como mi profe"></div><div style="width:200px"><label class="lbl">Comando</label><input class="inp" id="kslug" value="${esc(sk.slug)}" placeholder="ecuaciones" style="font-family:ui-monospace,Menlo,monospace"></div></div>
+    ${isNew ? `<div class="tpl-row">${SKILL_TEMPLATES.map((t, k) => `<button class="tpl" data-tpl="${k}"><b>${t.name}</b><small>${t.description}</small></button>`).join('')}</div>` : ''}
+    <div class="row" style="gap:12px;align-items:flex-end"><div class="grow"><label class="lbl">Nombre</label><input class="inp" id="kname" value="${esc(sk.name)}" placeholder="Ej: Ecuaciones como mi profe"></div><div style="width:200px"><label class="lbl">Comando</label><input class="inp" id="kslug" value="${esc(sk.slug)}" placeholder="ecuaciones" style="font-family:ui-monospace,Menlo,monospace"></div></div>
     <label class="lbl">Descripción corta (opcional)</label><input class="inp" id="kdesc" value="${esc(sk.description)}" placeholder="Para qué sirve">
     <label class="lbl">¿Qué tiene que hacer?</label><textarea class="inp" id="kins" rows="4" placeholder="Ej: Resuelve las ecuaciones con el método de la balanza, como en el PDF. Siempre comprueba el resultado al final y marca la solución con un recuadro.">${esc(sk.instructions)}</textarea>
     <label class="lbl">Material de referencia (PDF, fotos o texto con ejercicios hechos como tú quieres)</label>
@@ -4108,11 +4163,11 @@ function skillForm(skill, pre = {}) {
   $('#kink', el).onclick = () => openInk((s) => kbox.add([s]));
   $('#kname', el).oninput = () => { if (!slugTouched) $('#kslug', el).value = uniqueSlug($('#kname', el).value, sk.id); };
   $('#kslug', el).oninput = () => { slugTouched = true; };
-  $$('[data-tpl]', el).forEach((b) => (b.onclick = () => { const t = SKILL_TEMPLATES[+b.dataset.tpl]; $('#kemo', el).value = t.emoji; $('#kname', el).value = t.name; $('#kslug', el).value = uniqueSlug(t.slug, sk.id); $('#kdesc', el).value = t.description; $('#kins', el).value = t.instructions; slugTouched = true; }));
+  $$('[data-tpl]', el).forEach((b) => (b.onclick = () => { const t = SKILL_TEMPLATES[+b.dataset.tpl]; $('#kname', el).value = t.name; $('#kslug', el).value = uniqueSlug(t.slug, sk.id); $('#kdesc', el).value = t.description; $('#kins', el).value = t.instructions; slugTouched = true; }));
   $('#ksave', el).onclick = async () => {
     const name = $('#kname', el).value.trim();
     if (!name) return toast('Ponle un nombre a la skill', true);
-    Object.assign(sk, { name, emoji: $('#kemo', el).value.trim() || '✨', slug: uniqueSlug($('#kslug', el).value || name, sk.id), description: $('#kdesc', el).value.trim(), instructions: $('#kins', el).value.trim(), sources: srcs });
+    Object.assign(sk, { name, slug: uniqueSlug($('#kslug', el).value || name, sk.id), description: $('#kdesc', el).value.trim(), instructions: $('#kins', el).value.trim(), sources: srcs });
     const analyze = $('#kan', el).checked && (srcs.length || sk.instructions);
     m.close();
     if (analyze) {
@@ -4128,8 +4183,8 @@ function pageSkills(v, _, q) {
   const list = [...ST.skills].sort((a, b) => (b.uses || 0) - (a.uses || 0) || b.createdAt - a.createdAt);
   v.innerHTML = `<div class="page narrow">
     <div class="hero"><div class="grow"><h1>Skills<span>Enséñale cómo lo quieres.</span></h1><p>Sube un PDF o fotos con ejercicios hechos a tu manera (o la de tu profe) y ${APP_NAME} aprende el método. Luego escribe <b>/</b> en el Solver, el chat o al crear un set y lo hará igual.</p></div><button class="btn btn-primary btn-lg" id="knew">${ic('plus')} Nueva skill</button></div>
-    <div class="sk-grid">${list.map((s) => `<a class="card sk-card spot" href="#/skill/${s.id}"><div class="row"><span class="sk-ico" style="width:46px;height:46px;font-size:22px;border-radius:14px">${esc(s.emoji || '✨')}</span><div class="grow"><h3 style="font-size:19px">${esc(s.name)}</h3></div></div><span class="slug">/${esc(s.slug)}</span><p>${esc(s.description || s.instructions.slice(0, 110) || 'Sin descripción')}</p><span class="muted" style="font-size:13px;margin-top:auto">${s.sources.length} ${s.sources.length === 1 ? 'archivo' : 'archivos'} de referencia · usada ${s.uses || 0} ${s.uses === 1 ? 'vez' : 'veces'}</span></a>`).join('')}<button class="dashed" id="knew2"><span class="plus">${ic('plus')}</span>Nueva skill</button></div>
-    ${!list.length ? `<h2 class="sec-title">Empieza con una plantilla</h2><div class="tpl-row">${SKILL_TEMPLATES.map((t, k) => `<button class="tpl card" data-tpl="${k}"><b>${t.emoji} ${t.name}</b><small>${t.description}</small></button>`).join('')}</div>` : ''}</div>`;
+    <div class="sk-grid">${list.map((s) => `<a class="card sk-card spot" href="#/skill/${s.id}"><div class="row"><span class="sk-ico" style="width:46px;height:46px;font-size:22px;border-radius:14px">${ic('slash')}</span><div class="grow"><h3 style="font-size:19px">${esc(s.name)}</h3></div></div><span class="slug">/${esc(s.slug)}</span><p>${esc(s.description || s.instructions.slice(0, 110) || 'Sin descripción')}</p><span class="muted" style="font-size:13px;margin-top:auto">${s.sources.length} ${s.sources.length === 1 ? 'archivo' : 'archivos'} de referencia · usada ${s.uses || 0} ${s.uses === 1 ? 'vez' : 'veces'}</span></a>`).join('')}<button class="dashed" id="knew2"><span class="plus">${ic('plus')}</span>Nueva skill</button></div>
+    ${!list.length ? `<h2 class="sec-title">Empieza con una plantilla</h2><div class="tpl-row">${SKILL_TEMPLATES.map((t, k) => `<button class="tpl card" data-tpl="${k}"><b>${t.name}</b><small>${t.description}</small></button>`).join('')}</div>` : ''}</div>`;
   $('#knew', v).onclick = $('#knew2', v).onclick = () => skillForm();
   $$('[data-tpl]', v).forEach((b) => (b.onclick = () => { skillForm(); setTimeout(() => $(`.modal [data-tpl="${b.dataset.tpl}"]`)?.click(), 50); }));
   if (q.new) skillForm();
@@ -4141,7 +4196,7 @@ function pageSkill(v, id, q) {
   let tab = q.tab || 'use';
   const draw = () => {
     v.innerHTML = `<div class="page narrow"><div class="row between wrap"><a class="back" href="#/skills">${ic('left')} Skills</a><div class="row"><button class="btn btn-ghost btn-sm" id="kedit">${ic('edit')} Editar</button><button class="icon-btn" id="kdel">${ic('trash')}</button></div></div>
-      <div class="row" style="margin:26px 0 8px;gap:18px;align-items:center"><span class="sk-ico" style="width:66px;height:66px;font-size:32px;border-radius:20px">${esc(sk.emoji || '✨')}</span><div class="grow"><h1 style="font-size:36px">${esc(sk.name)}</h1><div class="row" style="margin-top:8px;gap:8px"><span class="sk-card" style="padding:0;min-height:0"><span class="slug">/${esc(sk.slug)}</span></span><span class="muted">${esc(sk.description)}</span></div></div></div>
+      <div class="row" style="margin:26px 0 8px;gap:18px;align-items:center"><span class="sk-ico" style="width:66px;height:66px;font-size:32px;border-radius:20px">${ic('slash')}</span><div class="grow"><h1 style="font-size:36px">${esc(sk.name)}</h1><div class="row" style="margin-top:8px;gap:8px"><span class="sk-card" style="padding:0;min-height:0"><span class="slug">/${esc(sk.slug)}</span></span><span class="muted">${esc(sk.description)}</span></div></div></div>
       <div class="tabs" style="margin:26px 0 24px">${[['use', 'Usar'], ['guide', 'Método aprendido'], ['src', 'Material'], ['out', `Resultados (${sk.outputs.length})`]].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div><div id="kb"></div></div>`;
     $$('[data-tab]', v).forEach((b) => (b.onclick = () => { tab = b.dataset.tab; draw(); }));
     $('#kedit', v).onclick = () => skillForm(sk);
@@ -4204,9 +4259,9 @@ function openPalette() {
     { sec: 'Acciones', icon: ic('draw'), label: 'Escribir a mano y resolver', run: () => openInk(async (s) => { const h = { id: uid(), kind: 'solve', question: '', sources: [s], answer: '', chat: [], skillIds: [], createdAt: Date.now() }; await save('history', h); go('/solve/' + h.id); }) },
     { sec: 'Acciones', icon: ic(SETTINGS.theme === 'dark' ? 'sun' : 'moon'), label: 'Cambiar tema claro/oscuro', run: () => $('#sbtheme').click() },
     { sec: 'Acciones', icon: ic('sliders'), label: 'Ajustes', run: () => openSettings() },
-    ...ST.sets.map((s) => ({ sec: 'Sets', icon: esc(s.emoji || '📘'), label: s.title, hint: s.subject, run: () => go('/set/' + s.id) })),
+    ...ST.sets.map((s) => ({ sec: 'Sets', icon: ic('cards'), label: s.title, hint: s.subject, run: () => go('/set/' + s.id) })),
     ...ST.exams.map((e) => ({ sec: 'Exámenes', icon: ic('exam'), label: e.title, hint: fmtDate(e.date), run: () => go('/exam/' + e.id) })),
-    ...ST.skills.map((s) => ({ sec: 'Skills', icon: esc(s.emoji || '✨'), label: `/${s.slug} · ${s.name}`, hint: 'Usar en el Solver', run: () => go(`/?tool=solver&skill=${encodeURIComponent(s.slug)}`) })),
+    ...ST.skills.map((s) => ({ sec: 'Skills', icon: ic('slash'), label: `/${s.slug} · ${s.name}`, hint: 'Usar en el Solver', run: () => go(`/?tool=solver&skill=${encodeURIComponent(s.slug)}`) })),
   ];
   const m = openModal(`<div class="pal-in">${ic('search')}<input id="pq" placeholder="Busca sets, exámenes, skills o acciones…" autocomplete="off"><kbd>esc</kbd></div><div class="pal-list" id="pl"></div><div class="pal-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> moverte</span><span><kbd>↵</kbd> abrir</span><span><kbd>⌘</kbd> <kbd>K</kbd> abrir/cerrar</span></div>`, { cls: 'pal', closable: true });
   m.el.parentElement.classList.add('pal-ov');
@@ -4286,7 +4341,7 @@ const COND = {
 };
 const AUTO_TEMPLATES = [
   { name: 'Pack completo al subir apuntes', trigger: { type: 'upload' }, blocks: [{ t: 'act', type: 'flashcards' }, { t: 'act', type: 'quiz' }, { t: 'act', type: 'cheat' }] },
-  { name: 'El día del examen: resumen y repaso', trigger: { type: 'exam_countdown', n: 0, time: '07:30' }, blocks: [{ t: 'act', type: 'summary', style: 'sheet', where: 'both' }, { t: 'act', type: 'notify', text: 'Hoy tienes «{titulo}». Tu resumen rápido está en la mochila: repásalo antes de salir 💪' }, { t: 'act', type: 'digest' }] },
+  { name: 'El día del examen: resumen y repaso', trigger: { type: 'exam_countdown', n: 0, time: '07:30' }, blocks: [{ t: 'act', type: 'summary', style: 'sheet', where: 'both' }, { t: 'act', type: 'notify', text: 'Hoy tienes «{titulo}». Tu resumen rápido está en la mochila: repásalo antes de salir' }, { t: 'act', type: 'digest' }] },
   { name: 'Cuenta atrás de examen', trigger: { type: 'exam_countdown', n: 3, time: '08:00' }, blocks: [{ t: 'act', type: 'notify', text: 'Faltan {dias} días para «{titulo}»' }, { t: 'if', cond: { type: 'cards_due', n: 5 }, then: [{ t: 'act', type: 'digest' }], else: [{ t: 'act', type: 'quiz' }] }] },
   { name: 'Mochila → flashcards de los apuntes nuevos', trigger: { type: 'backpack', kind: 'explanation' }, blocks: [{ t: 'act', type: 'make_set' }, { t: 'act', type: 'flashcards' }, { t: 'if', cond: { type: 'exam_soon', n: 14 }, then: [{ t: 'act', type: 'quiz' }, { t: 'act', type: 'add_event', title: 'Repasar {titulo}', offset: 1, time: '17:00' }], else: [] }] },
   { name: 'Deberes → set de estudio', trigger: { type: 'homework' }, blocks: [{ t: 'act', type: 'make_set' }, { t: 'act', type: 'flashcards' }] },
@@ -4467,7 +4522,7 @@ async function execAction(act, ctx, auto) {
       const t = s && topicOf(s);
       const blocks = s && s.sources ? sourcesBlocks(s.sources, true) : [];
       const out = await ai({ system: SYS(), max_tokens: 8000, skills: skill ? [skill] : [], messages: [{ role: 'user', content: [...blocks, { type: 'text', text: `${mat}\n\n${t ? `(El estudiante ha sacado un ${ctx.pct}% en "${t.title}".)\n` : ''}${fillTpl(act.prompt, ctx) || 'Aplica la skill a este material.'}` }] }] });
-      const title = skill ? `${skill.emoji || ''} /${skill.slug}` : (act.prompt || 'Resultado').slice(0, 60);
+      const title = skill ? `/${skill.slug}` : (act.prompt || 'Resultado').slice(0, 60);
       if (s) return addDoc(s, title, out);
       const src = { id: uid(), kind: 'text', name: title, mime: 'text/plain', data: out };
       return save('items', { id: uid(), source: src, name: title, hash: quickHash(out), subject: ctxSubject(ctx), kind: 'notes', title, topic: '', summary: 'Creado por una automatización', text: out, status: 'done', generated: true, createdAt: Date.now() });

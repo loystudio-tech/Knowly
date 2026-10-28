@@ -22,18 +22,18 @@ Usa **tu propia API key** de Anthropic (Claude). Pagas solo lo que usas, normalm
 
 | | |
 |---|---|
-| 🎒 **Mochila** | Suelta hasta 30 capturas, fotos, PDFs o Word. Knowly lee cada uno y lo clasifica por **tipo** (explicación, ejercicios, deberes, examen, apuntes) y por **clase** (Mates, Física…). Una pizarra con teoría es una explicación; una pizarra con ejercicios A, B, C son ejercicios. Puedes renombrar o unir clases (por ejemplo Física y Química) y, con cualquier selección, repasar, generar ejercicios nuevos, preparar un examen o crear una skill. |
-| 📝 **Deberes** | Sube una foto o captura y olvídate: Knowly lo prepara en segundo plano. **Te lo explica paso a paso en vez de solo resolverlo** (primero pistas, luego compruebas tu respuesta), con chat de tutor, pizarra con voz, lectura en voz alta con traducción y vocabulario para alemán, español u otros idiomas, lo pone en el calendario (y cuándo leerlo) y, si es material de examen, crea guía de estudio, flashcards, test y un plan con cuenta atrás. |
-| ➕ **Crear desde…** | Todas las pantallas de «crear» (flashcards, quiz, guía, examen, skill, deberes) aceptan hasta 10 fuentes: archivos, texto pegado, **YouTube**, **vídeo** (se analizan fotogramas), enlaces públicos de **Google Drive**, páginas web, cámara, arrastrar y soltar, Word y PowerPoint. |
-| 🧮 **Solver** | Resuelve problemas paso a paso a partir de texto, una foto, un PDF o algo escrito a mano (también con Apple Pencil). Puedes preguntarle sobre la solución. |
-| 🧑‍🏫 **Pizarra** | Una clase que se va escribiendo paso a paso, con dibujos y voz. |
-| 📚 **Sets de estudio** | Se crean desde tus archivos y se ordenan solos por materia. Cada set trae guía de estudio, guía de repaso, flashcards, quiz, simulacro, chuleta, podcast y un tutor con chat (también por voz). |
-| 🔁 **Repaso diario** | Repetición espaciada con todas tus flashcards, racha de días y mapa de actividad. |
-| 🎯 **Predictor de exámenes** | Temas más probables, plan de estudio día a día, simulacros y chuleta. |
-| ✨ **Skills** (`/`) | Sube un PDF o fotos con ejercicios hechos a tu manera (o a la de tu profe). Knowly aprende el método y lo aplica cuando escribes `/nombre`. También crea ejercicios nuevos y te enseña el método en la pizarra. |
-| ⚡ **Automatizaciones** | Monta reglas con **bloques**, como en Scratch (arrastrar y soltar, con `si / entonces / si no`), o usa la lista de pasos sencilla. Ejemplo: «El día del examen → resumen rápido + aviso por la mañana para repasar». Se activan al subir material, al ordenar la mochila, al tener los deberes listos, al apuntar un examen, N días antes de un examen, al sacar mala nota o cada día. |
-| ✍️ **Escritura** | Corrector, mejorar redacción, parafrasear, resumir, citas (APA, MLA…) y explicar textos. |
-| 📅 **Calendario** | Deberes, lecturas y exámenes (con hora opcional), avisos dentro de la app (campana) y **exportación .ics** con alarmas para tu app de calendario. |
+| **Mochila** | Suelta hasta 30 capturas, fotos, PDFs o Word. Knowly lee cada uno y lo clasifica por **tipo** (explicación, ejercicios, deberes, examen, apuntes) y por **clase** (Mates, Física…). Una pizarra con teoría es una explicación; una pizarra con ejercicios A, B, C son ejercicios. Puedes renombrar o unir clases (por ejemplo Física y Química) y, con cualquier selección, repasar, generar ejercicios nuevos, preparar un examen o crear una skill. |
+| **Deberes** | Sube una foto o captura y olvídate: Knowly lo prepara en segundo plano. **Te lo explica paso a paso en vez de solo resolverlo** (primero pistas, luego compruebas tu respuesta), con chat de tutor, pizarra con voz, lectura en voz alta con traducción y vocabulario para alemán, español u otros idiomas, lo pone en el calendario (y cuándo leerlo) y, si es material de examen, crea guía de estudio, flashcards, test y un plan con cuenta atrás. |
+| **Crear desde…** | Todas las pantallas de «crear» (flashcards, quiz, guía, examen, skill, deberes) aceptan hasta 10 fuentes: archivos, texto pegado, **YouTube**, **vídeo** (se analizan fotogramas), enlaces públicos de **Google Drive**, páginas web, cámara, arrastrar y soltar, Word y PowerPoint. |
+| **Solver** | Resuelve problemas paso a paso a partir de texto, una foto, un PDF o algo escrito a mano (también con Apple Pencil). Puedes preguntarle sobre la solución. |
+| **Pizarra** | Una clase que se va escribiendo paso a paso, con dibujos y voz. |
+| **Sets de estudio** | Se crean desde tus archivos y se ordenan solos por materia. Cada set trae guía de estudio, guía de repaso, flashcards, quiz, simulacro, chuleta, podcast y un tutor con chat (también por voz). |
+| **Repaso diario** | Repetición espaciada con todas tus flashcards, racha de días y mapa de actividad. |
+| **Predictor de exámenes** | Temas más probables, plan de estudio día a día, simulacros y chuleta. |
+| **Skills** (`/`) | Sube un PDF o fotos con ejercicios hechos a tu manera (o a la de tu profe). Knowly aprende el método y lo aplica cuando escribes `/nombre`. También crea ejercicios nuevos y te enseña el método en la pizarra. |
+| **Automatizaciones** | Monta reglas con **bloques**, como en Scratch (arrastrar y soltar, con `si / entonces / si no`), o usa la lista de pasos sencilla. Ejemplo: «El día del examen → resumen rápido + aviso por la mañana para repasar». Se activan al subir material, al ordenar la mochila, al tener los deberes listos, al apuntar un examen, N días antes de un examen, al sacar mala nota o cada día. |
+| **Escritura** | Corrector, mejorar redacción, parafrasear, resumir, citas (APA, MLA…) y explicar textos. |
+| **Calendario** | Deberes, lecturas y exámenes (con hora opcional), avisos dentro de la app (campana) y **exportación .ics** con alarmas para tu app de calendario. |
 | ⌘ **Buscador** | ⌘K / Ctrl+K para ir a cualquier sitio o lanzar acciones. |
 
 Funciona en **Mac, PC, iPad y móvil**. Se instala como app (PWA), tiene modo oscuro y claro, y abre sin conexión.
@@ -76,7 +76,7 @@ Descarga el último `.dmg` (Mac), `.exe` (Windows) o `.AppImage` (Linux) desde [
 
 Pulsa el botón **Deploy to Netlify** de arriba (o **Add new site → Import from Git**). Pon `ANTHROPIC_API_KEY` y `APP_PASSWORD` cuando te las pida. El proxy es `netlify/edge-functions/ai.js`.
 
-> ⚠️ Arrastrar la carpeta a *Netlify Drop* no sirve, porque la función de la IA no se publicaría.
+> Arrastrar la carpeta a *Netlify Drop* no sirve, porque la función de la IA no se publicaría.
 
 ### Vercel
 

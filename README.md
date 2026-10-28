@@ -22,18 +22,18 @@ It runs on **your own Anthropic (Claude) API key**. You pay only for what you us
 
 | | |
 |---|---|
-| 🎒 **Backpack** | Drop up to 30 screenshots, photos, PDFs or Word files. Knowly reads each one and sorts it by **type** (explanation, exercises, homework, exam, notes) and by **class** (Maths, Physics…). A whiteboard full of theory is an explanation; a whiteboard with exercises A, B, C is exercises. Rename or merge classes (e.g. Physics + Chemistry) and later review, generate new exercises, prepare an exam or create a skill from any selection. |
-| 📝 **Homework** | Upload a photo or screenshot and walk away: Knowly prepares it in the background. It **explains step by step instead of just solving** (hints first, check your answer), has a tutor chat, a whiteboard with voice, reads German/Spanish/other-language texts aloud with translation and vocabulary, puts it in your calendar (and when to read it), and detects if it is exam material and builds a study guide, flashcards, a quiz and a countdown plan. |
-| ➕ **Create from…** | Every "create" screen (flashcards, quiz, study guide, exam, skill, homework) takes up to 10 sources: files, pasted text, **YouTube**, **video** (frames are analysed), **Google Drive** public links, web pages, camera, drag and drop, and Word/PowerPoint. |
-| 🧮 **Solver** | Solves problems step by step from text, a photo, a PDF or handwriting (Apple Pencil works too). You can ask follow-up questions about the solution. |
-| 🧑‍🏫 **Whiteboard tutor** | A lesson that writes itself step by step, with drawings and a voice. |
-| 📚 **Study sets** | Built from your files and sorted by subject automatically. Each set includes a study guide, review guide, flashcards, quiz, mock exam, cheat sheet, podcast and a chat tutor (voice supported). |
-| 🔁 **Daily review** | Spaced repetition across all your flashcards, with a day streak and an activity heatmap. |
-| 🎯 **Exam predictor** | Most likely topics, a day-by-day study plan, mock exams and a cheat sheet. |
-| ✨ **Skills** (`/`) | Upload a PDF or photos with exercises solved your way (or your teacher's way). Knowly learns the method and applies it whenever you type `/skill-name`. It can also generate new exercises and teach the method on the whiteboard. |
-| ⚡ **Automations** | Build rules with **blocks**, Scratch-style (drag and drop, with `if / then / else`), or use the simple step list. Example: "On exam day → quick summary + morning reminder to review". Triggers: material uploaded, backpack sorted, homework ready, exam added, N days before an exam, low quiz score, every day. |
-| ✍️ **Writing tools** | Proofreader, rewrite, paraphrase, summarize, citations (APA, MLA…) and text explainer. |
-| 📅 **Calendar** | Homework, readings and exams (with an optional time), in-app reminders (bell) and a **.ics export** with alarms for your calendar app. |
+| **Backpack** | Drop up to 30 screenshots, photos, PDFs or Word files. Knowly reads each one and sorts it by **type** (explanation, exercises, homework, exam, notes) and by **class** (Maths, Physics…). A whiteboard full of theory is an explanation; a whiteboard with exercises A, B, C is exercises. Rename or merge classes (e.g. Physics + Chemistry) and later review, generate new exercises, prepare an exam or create a skill from any selection. |
+| **Homework** | Upload a photo or screenshot and walk away: Knowly prepares it in the background. It **explains step by step instead of just solving** (hints first, check your answer), has a tutor chat, a whiteboard with voice, reads German/Spanish/other-language texts aloud with translation and vocabulary, puts it in your calendar (and when to read it), and detects if it is exam material and builds a study guide, flashcards, a quiz and a countdown plan. |
+| **Create from…** | Every "create" screen (flashcards, quiz, study guide, exam, skill, homework) takes up to 10 sources: files, pasted text, **YouTube**, **video** (frames are analysed), **Google Drive** public links, web pages, camera, drag and drop, and Word/PowerPoint. |
+| **Solver** | Solves problems step by step from text, a photo, a PDF or handwriting (Apple Pencil works too). You can ask follow-up questions about the solution. |
+| **Whiteboard tutor** | A lesson that writes itself step by step, with drawings and a voice. |
+| **Study sets** | Built from your files and sorted by subject automatically. Each set includes a study guide, review guide, flashcards, quiz, mock exam, cheat sheet, podcast and a chat tutor (voice supported). |
+| **Daily review** | Spaced repetition across all your flashcards, with a day streak and an activity heatmap. |
+| **Exam predictor** | Most likely topics, a day-by-day study plan, mock exams and a cheat sheet. |
+| **Skills** (`/`) | Upload a PDF or photos with exercises solved your way (or your teacher's way). Knowly learns the method and applies it whenever you type `/skill-name`. It can also generate new exercises and teach the method on the whiteboard. |
+| **Automations** | Build rules with **blocks**, Scratch-style (drag and drop, with `if / then / else`), or use the simple step list. Example: "On exam day → quick summary + morning reminder to review". Triggers: material uploaded, backpack sorted, homework ready, exam added, N days before an exam, low quiz score, every day. |
+| **Writing tools** | Proofreader, rewrite, paraphrase, summarize, citations (APA, MLA…) and text explainer. |
+| **Calendar** | Homework, readings and exams (with an optional time), in-app reminders (bell) and a **.ics export** with alarms for your calendar app. |
 | ⌘ **Command palette** | ⌘K / Ctrl+K to jump anywhere or run actions. |
 
 Works on **Mac, PC, iPad and phone**. Installable as an app (PWA), with dark and light themes, and it opens offline.
@@ -78,7 +78,7 @@ Download the latest `.dmg` (Mac), `.exe` (Windows) or `.AppImage` (Linux) from t
 
 Press the **Deploy to Netlify** button at the top (or **Add new site → Import from Git**). Set `ANTHROPIC_API_KEY` and `APP_PASSWORD` when asked. The proxy is `netlify/edge-functions/ai.js`.
 
-> ⚠️ Dragging the folder into *Netlify Drop* does not work, because the AI function would not be published.
+> Dragging the folder into *Netlify Drop* does not work, because the AI function would not be published.
 
 ### Vercel
 
