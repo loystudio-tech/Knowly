@@ -1390,10 +1390,16 @@ function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTi
 
 /* ---------------- settings (per device) ---------------- */
 const NO_SERVER = location.protocol === 'file:' || /\.github\.io$/.test(location.hostname) || !!window.KNOWLY_DESKTOP;
-const SETTINGS_DEFAULT = { mode: NO_SERVER ? 'direct' : 'netlify', password: '', apiKey: '', model: 'claude-sonnet-5-5', name: '', theme: 'dark', rate: 1, voice: '', voices: {}, email: '', sidebarMini: false, autoSpeak: true };
+const SETTINGS_DEFAULT = { mode: 'direct', dailyLimit: 1000000, password: '', apiKey: '', model: 'claude-sonnet-5-5', name: '', theme: 'dark', rate: 1, voice: '', voices: {}, email: '', sidebarMini: false, autoSpeak: true };
 let SETTINGS = { ...SETTINGS_DEFAULT };
 try { SETTINGS = { ...SETTINGS_DEFAULT, ...JSON.parse(localStorage.getItem('knowly.settings') || '{}') }; } catch (e) {}
 function saveSettings() { try { localStorage.setItem('knowly.settings', JSON.stringify(SETTINGS)); } catch (e) {} }
+/* ---- your own spending guard: tokens used today on this device (the key never leaves your browser) ---- */
+const USAGE_KEY = 'knowly.usage';
+function usageToday() { try { const u = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}'); return u.d === todayISO() ? (u.t || 0) : 0; } catch (e) { return 0; } }
+function addUsage(n) { if (!(n > 0)) return; try { localStorage.setItem(USAGE_KEY, JSON.stringify({ d: todayISO(), t: usageToday() + n })); } catch (e) {} }
+const fmtTok = (n) => n >= 1e6 ? (n / 1e6).toLocaleString('es', { maximumFractionDigits: 1 }) + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' mil' : String(n);
+const MAX_OUT_TOKENS = 16000;      // no single request may ask for more than this
 
 /* ---------------- storage (IndexedDB) ---------------- */
 const STORES = ['sets', 'exams', 'events', 'history', 'notes', 'skills', 'automations', 'homework', 'subjects', 'items', 'alerts'];
@@ -1561,7 +1567,9 @@ async function ai({ system, messages, schema, max_tokens = 8000, model, onText, 
       messages = [{ role: 'user', content: [...blocks, { type: 'text', text: 'Este es el material de referencia de mis skills. Úsalo como modelo de método, formato y estilo.' }] }, { role: 'assistant', content: 'Entendido. Seguiré exactamente ese método y ese formato.' }, ...messages];
     }
   }
-  const body = { model: model || SETTINGS.model, max_tokens, messages, stream: true };
+  const body = { model: model || SETTINGS.model, max_tokens: Math.min(max_tokens, MAX_OUT_TOKENS), messages, stream: true };
+  const dayLimit = +SETTINGS.dailyLimit || 0;
+  if (dayLimit > 0 && usageToday() >= dayLimit) throw new Error(`Has llegado a tu límite de hoy (${fmtTok(dayLimit)} de tokens). Puedes subirlo en Ajustes o seguir mañana.`);
   if (system) body.system = system;
   if (schema) body.output_config = { format: { type: 'json_schema', schema } };
   const direct = SETTINGS.mode === 'direct';
@@ -1571,6 +1579,7 @@ async function ai({ system, messages, schema, max_tokens = 8000, model, onText, 
   if (direct) { headers['x-api-key'] = SETTINGS.apiKey; headers['anthropic-version'] = '2023-06-01'; headers['anthropic-dangerous-direct-browser-access'] = 'true'; }
   else headers['x-app-password'] = SETTINGS.password || '';
   AI_BUSY++;
+  let tokIn = 0, tokOut = 0;
   try {
     let res;
     try { res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal }); }
@@ -1596,7 +1605,8 @@ async function ai({ system, messages, schema, max_tokens = 8000, model, onText, 
         if (!d || d === '[DONE]') continue;
         let ev; try { ev = JSON.parse(d); } catch (e) { continue; }
         if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') { text += ev.delta.text; onText && onText(text); }
-        else if (ev.type === 'message_delta') stop = ev.delta && ev.delta.stop_reason;
+        else if (ev.type === 'message_start' && ev.message && ev.message.usage) { const u = ev.message.usage; tokIn = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0); tokOut = u.output_tokens || 0; }
+        else if (ev.type === 'message_delta') { stop = ev.delta && ev.delta.stop_reason; if (ev.usage && ev.usage.output_tokens != null) tokOut = ev.usage.output_tokens; }
         else if (ev.type === 'error') throw new Error((ev.error && ev.error.message) || 'Error de la IA');
       }
     };
@@ -1615,7 +1625,7 @@ async function ai({ system, messages, schema, max_tokens = 8000, model, onText, 
       catch (e) { const a = text.indexOf('{'), b = text.lastIndexOf('}'); try { return JSON.parse(text.slice(a, b + 1)); } catch (e2) { throw new Error('La IA devolvió un formato raro. Inténtalo otra vez.'); } }
     }
     return text;
-  } finally { AI_BUSY--; }
+  } finally { AI_BUSY--; addUsage(tokIn + tokOut); }
 }
 
 /* progress modal wrapper for long generations */
@@ -1974,7 +1984,7 @@ async function subsToSource(file) {
 /* ---------- links: YouTube / Drive / web through /api/source ---------- */
 const REMOTE_LABEL = { youtube: 'YouTube', drive: 'Google Drive', web: 'la web' };
 async function fetchRemote(kind, url, lang) {
-  if (SETTINGS.mode === 'direct') throw new Error(`Para leer enlaces de ${REMOTE_LABEL[kind]} Knowly necesita el modo servidor (Netlify, Vercel, Cloudflare o Node). Mientras tanto pega el texto o la transcripción.`);
+  if (NO_SERVER) throw new Error(`Para leer enlaces de ${REMOTE_LABEL[kind]} Knowly necesita estar alojado en Netlify, Vercel, Cloudflare o Node (no funciona abriendo el archivo ni en la app de escritorio). Mientras tanto pega el texto o la transcripción.`);
   let res;
   try { res = await fetch('/api/source', { method: 'POST', headers: { 'content-type': 'application/json', 'x-app-password': SETTINGS.password || '' }, body: JSON.stringify({ kind, url, lang: lang || '' }) }); }
   catch (e) { throw new Error('Sin conexión con tu servidor.'); }
@@ -2514,9 +2524,14 @@ function openSettings() {
   if ($('#settings-modal')) return;
   const m = openModal(`<div id="settings-modal"><h2>Ajustes</h2><p class="lead">Todo se guarda solo en este dispositivo.</p>
     <label class="lbl">Conexión con la IA</label>
-    <div class="seg2" id="smode"><button data-v="netlify">Mi servidor (recomendado)</button><button data-v="direct">Clave directa</button></div>
-    <div id="snet"><label class="lbl">Contraseña de la app</label><input class="inp" id="spass" type="password" placeholder="La que pusiste en APP_PASSWORD" value="${esc(SETTINGS.password)}"><p class="hint">Tu API key vive en tu servidor (Netlify, Vercel, Cloudflare…), no en el navegador.</p></div>
-    <div id="sdir"><label class="lbl">API key de Anthropic</label><input class="inp" id="skey" type="password" placeholder="sk-ant-…" value="${esc(SETTINGS.apiKey)}"><p class="hint">Para usarla sin servidor (abriendo el archivo, en GitHub Pages o en la app de escritorio). Se guarda solo en este navegador. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Consigue tu API key</a></p></div>
+    <div class="seg2" id="smode"><button data-v="direct">Mi propia clave (recomendado)</button><button data-v="netlify">Servidor con contraseña</button></div>
+    <div id="sdir"><label class="lbl">Tu API key de Anthropic</label><input class="inp" id="skey" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" value="${esc(SETTINGS.apiKey)}">
+      <p class="hint"><b>Cada persona usa la suya.</b> Tu clave se guarda solo en este navegador y se envía únicamente a Anthropic: no pasa por ningún servidor de ${APP_NAME} ni de quien alojó la web, y nadie más puede verla ni gastarla. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Consigue tu API key</a>${SETTINGS.apiKey ? ' · <a href="#" id="skeyclear">Quitar mi clave de este dispositivo</a>' : ''}</p>
+      <p class="hint">Pon además un límite de gasto en tu cuenta de Anthropic (Console → Settings → Limits): es el único límite que protege de verdad tu clave.</p></div>
+    <div id="snet"><label class="lbl">Contraseña de la app</label><input class="inp" id="spass" type="password" autocomplete="off" placeholder="La que pusiste en APP_PASSWORD" value="${esc(SETTINGS.password)}"><p class="hint">Solo para servidores privados donde el dueño guardó su API key como variable de entorno (Netlify, Vercel, Cloudflare o Node). Si no sabes qué es esto, usa «Mi propia clave».</p></div>
+    <label class="lbl">Límite diario de uso en este dispositivo</label>
+    <select class="inp" id="slimit">${[[300000, 'Suave: 300 mil tokens al día'], [1000000, 'Normal: 1 millón al día'], [3000000, 'Alto: 3 millones al día'], [0, 'Sin límite']].map(([v, l]) => `<option value="${v}" ${(+SETTINGS.dailyLimit || 0) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <p class="hint">Hoy llevas ${fmtTok(usageToday())} de tokens. Al llegar al límite, ${APP_NAME} deja de llamar a la IA hasta mañana (o hasta que lo subas). Un set con varias fotos gasta unos 30-60 mil.</p>
     <label class="lbl">Modelo</label><select class="inp" id="smodel">${MODELS.map(([v, l]) => `<option value="${v}" ${SETTINGS.model === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <div class="row" style="gap:16px;align-items:flex-start"><div class="grow"><label class="lbl">Tu nombre</label><input class="inp" id="sname" value="${esc(SETTINGS.name)}" placeholder="Opcional"></div><div class="grow"><label class="lbl">Velocidad de voz</label><select class="inp" id="srate">${[0.85, 1, 1.15, 1.3].map((r) => `<option ${SETTINGS.rate == r ? 'selected' : ''} value="${r}">${r}x</option>`).join('')}</select></div></div>
     <label class="lbl">Tu email (solo para el botón «Enviarme el resumen»)</label><input class="inp" id="semail" type="email" placeholder="opcional" value="${esc(SETTINGS.email || '')}"><p class="hint">${APP_NAME} no envía correos por su cuenta: ese botón abre tu app de correo con el resumen listo. Para avisos automáticos usa la campana y «Descargar .ics» (tu calendario te avisa aunque ${APP_NAME} esté cerrado).</p>
@@ -2530,9 +2545,10 @@ function openSettings() {
   const paintMode = () => { $$('#smode button', m.el).forEach((b) => b.classList.toggle('on', b.dataset.v === mode)); $('#snet', m.el).classList.toggle('hidden', mode !== 'netlify'); $('#sdir', m.el).classList.toggle('hidden', mode !== 'direct'); };
   $$('#smode button', m.el).forEach((b) => (b.onclick = () => { mode = b.dataset.v; paintMode(); }));
   paintMode();
+  const kc = $('#skeyclear', m.el); if (kc) kc.onclick = (e) => { e.preventDefault(); SETTINGS.apiKey = ''; saveSettings(); $('#skey', m.el).value = ''; kc.remove(); toast('Tu clave se ha quitado de este dispositivo'); };
   $$('[data-say]', m.el).forEach((b) => (b.onclick = () => { const c = b.dataset.say, x = VOICE_LANGS.find((v) => v[0] === c); const prev = SETTINGS.voices; SETTINGS.voices = { ...(SETTINGS.voices || {}), [c]: $('#svoice-' + c, m.el).value }; Speech.stop(); Speech.say(x[3], { lang: x[2] }).finally(() => { SETTINGS.voices = prev; }); }));
   $('#ssave', m.el).onclick = () => {
-    Object.assign(SETTINGS, { mode, password: $('#spass', m.el).value.trim(), apiKey: $('#skey', m.el).value.trim(), model: $('#smodel', m.el).value, name: $('#sname', m.el).value.trim(), email: $('#semail', m.el).value.trim(), rate: +$('#srate', m.el).value, voices: Object.fromEntries(VOICE_LANGS.map(([c]) => [c, $('#svoice-' + c, m.el).value])), voice: $('#svoice-es', m.el).value, autoSpeak: $('#sauto', m.el).checked });
+    Object.assign(SETTINGS, { mode, dailyLimit: +$('#slimit', m.el).value, password: $('#spass', m.el).value.trim(), apiKey: $('#skey', m.el).value.trim(), model: $('#smodel', m.el).value, name: $('#sname', m.el).value.trim(), email: $('#semail', m.el).value.trim(), rate: +$('#srate', m.el).value, voices: Object.fromEntries(VOICE_LANGS.map(([c]) => [c, $('#svoice-' + c, m.el).value])), voice: $('#svoice-es', m.el).value, autoSpeak: $('#sauto', m.el).checked });
     saveSettings(); m.close(); shell(); route(); toast('Ajustes guardados');
   };
   $('#sexp', m.el).onclick = () => {
@@ -2662,7 +2678,7 @@ function pageHome(v, _, q) {
     <div class="home-top no-print"><button class="btn btn-sm" id="hist">${ic('clock')} Historial</button></div>
     <div class="home-hero"><div class="hi">${greeting()}</div><h1 class="home-title">${APP_NAME}: tu compañero de estudio IA</h1></div>
     <div class="seg" id="seg"><span class="thumb"></span>${[['study', 'study', 'Estudio'], ['exam', 'exam', 'Exámenes'], ['writing', 'pen', 'Escritura']].map(([k, i, l]) => `<button class="${mode === k ? 'on' : ''}" data-m="${k}">${ic(i)} ${l}</button>`).join('')}</div>
-    <div id="rem" style="max-width:1360px;margin:0 auto">${!SETTINGS.password && !SETTINGS.apiKey ? `<div class="alert"><div class="grow"><b>Conecta la IA para empezar.</b> <span class="muted">Pon la contraseña de tu Netlify o tu propia API key de Anthropic.</span></div><button class="btn btn-primary btn-sm" id="setup">Configurar</button></div>` : ''}${remindersHTML()}</div>
+    <div id="rem" style="max-width:1360px;margin:0 auto">${(SETTINGS.mode === 'direct' ? !SETTINGS.apiKey : !SETTINGS.password) ? `<div class="alert"><div class="grow"><b>Conecta la IA para empezar.</b> <span class="muted">Pon tu propia API key de Anthropic en Ajustes. Se queda solo en tu navegador.</span></div><button class="btn btn-primary btn-sm" id="setup">Configurar</button></div>` : ''}${remindersHTML()}</div>
     <div id="hbody"></div></div>`;
   bindReminders(v);
   const su = $('#setup', v); if (su) su.onclick = () => openSettings();

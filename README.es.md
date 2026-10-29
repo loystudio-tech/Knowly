@@ -8,7 +8,7 @@
 
 Sube fotos de la pizarra, del libro, PDFs o apuntes escritos a mano. Knowly los ordena por materias y te prepara guías, flashcards, quizzes, simulacros de examen, clases en pizarra con voz y podcasts.
 
-Usa **tu propia API key** de Anthropic (Claude). Pagas solo lo que usas, normalmente 1-4 $ al mes.
+Usa **tu propia API key** de Anthropic (Claude), que se queda en tu navegador. Pagas solo lo que usas, normalmente 1-4 $ al mes.
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/loystudio-tech/Knowly)
 
@@ -51,10 +51,14 @@ Knowly funciona **en cualquier sitio**: como app de escritorio, en el navegador 
 | Ponerla online para mí o mi clase | [Netlify](#netlify) · [Vercel](#vercel) · [Cloudflare Pages](#cloudflare-pages) | Sí (incluido) |
 | Alojarla en mi ordenador, VPS, Render, Railway… | [Servidor Node](#cualquier-servidor-node) | Sí (incluido) |
 
-Hay dos formas de conectar la IA, y puedes cambiar en **Ajustes** cuando quieras:
+**Cada persona usa su propia clave.** Cuando Knowly está alojado (Netlify, Vercel, Cloudflare…) la web **no guarda ningún secreto**: cada visitante pega su API key de Anthropic en **Ajustes → Mi propia clave**. La clave se guarda solo en el navegador de esa persona y se envía únicamente a `api.anthropic.com`. No pasa por el alojamiento, así que nadie (ni quien desplegó la web) puede ver ni gastar la clave de otro. El despliegue incluye una Content-Security-Policy estricta (`netlify.toml`, `vercel.json`, `_headers`, `server.js`) para que el navegador se niegue a enviar nada a otro dominio.
 
-- **Modo servidor (recomendado para compartir):** tu API key vive en las variables de entorno del alojamiento y nunca llega al navegador. Pon `ANTHROPIC_API_KEY` y `APP_PASSWORD` (una contraseña que inventes, para que nadie gaste tu saldo). Luego escribe esa contraseña en **Ajustes**.
-- **Modo clave directa (sin servidor):** pega tu API key en **Ajustes → Clave directa**. Se guarda solo en tu navegador o app. Ideal para uso personal; no compartas ese navegador.
+Límites que te protegen:
+- **Límite de gasto en la propia clave:** en la Console de Anthropic pon **Settings → Limits** (límite mensual). Lo ideal es crear un Workspace aparte para Knowly con su propio límite. Es el único límite que de verdad frena una clave.
+- **Límite diario dentro de la app:** **Ajustes → Límite diario** (300 mil / 1 millón / 3 millones de tokens al día, por dispositivo). Al llegar, Knowly deja de llamar a la IA hasta mañana.
+- **Tope por petición:** ninguna petición puede pedir más de 16.000 tokens de salida.
+
+Opcional, solo para servidores **privados**: **Servidor con contraseña**. Si pones `ANTHROPIC_API_KEY` y `APP_PASSWORD` como variables de entorno, quien sepa la contraseña usa *tu* clave a través de `/api/ai`. No lo hagas en una web que compartas públicamente sin la contraseña.
 
 Todo usa el mismo endpoint `/api/ai`, así que da igual qué alojamiento elijas.
 
@@ -74,26 +78,27 @@ Descarga el último `.dmg` (Mac), `.exe` (Windows) o `.AppImage` (Linux) desde [
 
 ### Netlify
 
-Pulsa el botón **Deploy to Netlify** de arriba (o **Add new site → Import from Git**). Pon `ANTHROPIC_API_KEY` y `APP_PASSWORD` cuando te las pida. El proxy es `netlify/edge-functions/ai.js`.
+Pulsa el botón **Deploy to Netlify** de arriba (o **Add new site → Import from Git**). No hace falta ninguna variable de entorno. Abre la web, ve a **Ajustes** y pega tu clave. El proxy opcional para servidores privados es `netlify/edge-functions/ai.js`.
 
 > Arrastrar la carpeta a *Netlify Drop* no sirve, porque la función de la IA no se publicaría.
 
 ### Vercel
 
-**Add New → Project → Import** este repo. Deja la configuración de build vacía (framework «Other») y añade `ANTHROPIC_API_KEY` y `APP_PASSWORD` en **Environment Variables**. El proxy es `api/ai.js`.
+**Add New → Project → Import** este repo. Deja la configuración de build vacía (framework «Other») No hace falta ninguna variable de entorno. El proxy opcional para servidores privados es `api/ai.js`.
 
 ### Cloudflare Pages
 
-**Workers & Pages → Create → Pages → Connect to Git.** Deja el comando de build vacío y el directorio de salida en `/`. Añade `ANTHROPIC_API_KEY` y `APP_PASSWORD` en **Settings → Variables and Secrets**. El proxy es `functions/api/ai.js`.
+**Workers & Pages → Create → Pages → Connect to Git.** Deja el comando de build vacío y el directorio de salida en `/`. No hace falta ninguna variable de entorno. El proxy opcional para servidores privados es `functions/api/ai.js`.
 
 ### Cualquier servidor Node
 
 ```bash
 git clone https://github.com/loystudio-tech/Knowly.git && cd Knowly
-ANTHROPIC_API_KEY=sk-ant-... APP_PASSWORD=tu-contraseña node server.js
+node server.js          # público: cada persona pega su clave en la app
+# privado: ANTHROPIC_API_KEY=sk-ant-... APP_PASSWORD=tu-contraseña node server.js
 ```
 
-Necesita Node 18+. En Render o Railway usa `npm start` como comando de inicio y añade las dos variables. Opcional: `PORT` (por defecto 8787).
+Necesita Node 18+. En Render o Railway usa `npm start` como comando de inicio. Opcional: `PORT` (por defecto 8787); las dos variables solo para un servidor privado.
 
 ### Instalarla como app desde el navegador
 
@@ -106,7 +111,7 @@ Necesita Node 18+. En Render o Railway usa `npm start` como comando de inicio y 
 
 - **No envía correos de verdad.** Knowly no tiene un servidor que mande emails. Los avisos son una campana dentro de la app, notificaciones del navegador (con la app abierta), **archivos .ics cuyas alarmas dispara tu app de calendario aunque Knowly esté cerrada** y un botón «enviarme un email» que abre tu correo (`mailto:`).
 - **No oye audio.** Claude lee imágenes y texto, no sonido. Los vídeos se analizan por fotogramas (diapositivas, pizarra); para lo que se dice en voz sube los subtítulos (`.srt` / `.vtt`) o pega la transcripción. Los archivos de audio no están soportados.
-- **YouTube, Drive y páginas web** los descarga el endpoint del servidor `/api/source` (necesita el modo servidor en Netlify, Vercel, Cloudflare o Node — no funciona en la app de escritorio, en modo clave directa ni con un `index.html` suelto; ahí puedes seguir subiendo archivos y vídeo o pegando texto y transcripciones). YouTube puede bloquear las direcciones de servidores; en ese caso la app te avisa y puedes pegar la transcripción. Drive solo funciona con archivos compartidos con «cualquiera que tenga el enlace».
+- **YouTube, Drive y páginas web** los descarga el endpoint del servidor `/api/source` (necesita estar alojado en Netlify, Vercel, Cloudflare o Node — no funciona en la app de escritorio ni con un `index.html` suelto; ahí puedes seguir subiendo archivos y vídeo o pegando texto y transcripciones). El endpoint no guarda secretos; si pones `APP_PASSWORD`, pasa a ser obligatoria. YouTube puede bloquear las direcciones de servidores; en ese caso la app te avisa y puedes pegar la transcripción. Drive solo funciona con archivos compartidos con «cualquiera que tenga el enlace».
 - **Las voces** son las de tu dispositivo (puedes elegir una por idioma en Ajustes). No hay voces neuronales de pago.
 - Las alarmas del `.ics` y la campana necesitan que abras el archivo de calendario o la app al menos una vez.
 
@@ -116,6 +121,7 @@ Necesita Node 18+. En Render o Railway usa `npm start` como comando de inicio y 
 - Los archivos solo se envían a la API de Anthropic cuando le pides algo a la IA.
 - Para cambiar de dispositivo: **Ajustes → Exportar** y luego **Importar** en el otro.
 - No hay analíticas ni rastreo.
+- Tu API key no se guarda nunca en este repositorio ni en el alojamiento: vive solo en tu navegador o app (localStorage), no se incluye en las copias de seguridad y puedes quitarla cuando quieras en **Ajustes**.
 
 ## ¿Cuánto cuesta?
 
@@ -155,7 +161,7 @@ Knowly es un proyecto independiente y no está afiliado a Anthropic ni a ninguna
 
 It runs on **your own Anthropic API key**:
 
-- **One click:** use the **Deploy to Netlify** button and set `ANTHROPIC_API_KEY` and `APP_PASSWORD`. Then enter the password in *Ajustes* (Settings).
+- **One click:** use the **Deploy to Netlify** button (no secrets needed) and paste your own key in *Ajustes*.
 - **No server:** open `index.html` (or host it on GitHub Pages) and paste your key in *Ajustes → Clave directa*. The key stays in your browser.
 
 All data stays in your browser (IndexedDB), with no accounts and no tracking. The interface is in Spanish. MIT licensed.

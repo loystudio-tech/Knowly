@@ -1,5 +1,6 @@
 // Proxy seguro hacia la API de Claude.
-// - Tu API key vive en Netlify (variable ANTHROPIC_API_KEY), nunca en el navegador.
+// SOLO PARA SERVIDORES PRIVADOS. En una web pública NO pongas ANTHROPIC_API_KEY: cada persona usa su propia clave desde el navegador.
+// - Si la pones, tu API key vive en Netlify (variable ANTHROPIC_API_KEY), nunca en el navegador.
 // - APP_PASSWORD evita que otra persona que encuentre tu web gaste tu saldo.
 // - Es una Edge Function con streaming: las respuestas largas no chocan con el límite de tiempo.
 
@@ -22,6 +23,8 @@ export default async (req) => {
   const raw = await req.text();
   const m = raw.match(/"model"\s*:\s*"([^"]+)"/);
   if (!m || !ALLOWED_MODELS.includes(m[1])) return json({ error: { message: 'Modelo no permitido' } }, 400);
+  const mt = raw.match(/"max_tokens"\s*:\s*(\d+)/);
+  if (!mt || +mt[1] > 16000) return json({ error: { message: 'max_tokens no permitido' } }, 400);
 
   const upstream = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

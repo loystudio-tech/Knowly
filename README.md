@@ -8,7 +8,7 @@
 
 Upload photos of the whiteboard, textbook pages, PDFs or handwritten notes. Knowly sorts them by subject and builds study guides, flashcards, quizzes, mock exams, whiteboard lessons with voice, and podcasts.
 
-It runs on **your own Anthropic (Claude) API key**. You pay only for what you use, usually $1–4 per month.
+It runs on **your own Anthropic (Claude) API key**, which stays in your browser. You pay only for what you use, usually $1–4 per month.
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/loystudio-tech/Knowly)
 
@@ -50,13 +50,17 @@ Knowly runs **anywhere**: as a desktop app, in your browser, or on any host. You
 |---|---|---|
 | Use it as a **Mac / Windows / Linux app** | [Desktop app](#desktop-app-mac-windows-linux) | No |
 | Try it in 1 minute | [Open `index.html` / GitHub Pages](#no-server-fastest) | No |
-| Put it online for me or my class | [Netlify](#netlify) · [Vercel](#vercel) · [Cloudflare Pages](#cloudflare-pages) | Yes (included) |
+| Put it online (everyone brings their own key) | [Netlify](#netlify) · [Vercel](#vercel) · [Cloudflare Pages](#cloudflare-pages) | Yes (included, no secrets) |
 | Host it on my own machine, VPS, Render, Railway… | [Node server](#any-node-host-render-railway-vps-docker) | Yes (included) |
 
-There are two ways to connect the AI, and you can switch in **Ajustes** (Settings) at any time:
+**Every person uses their own key.** When Knowly is hosted (Netlify, Vercel, Cloudflare…) the site holds **no secrets at all**: each visitor pastes their own Anthropic key in **Ajustes → Mi propia clave**. The key is stored only in that person's browser and is sent only to `api.anthropic.com`. It never goes through the host, so nobody (including whoever deployed the site) can see or spend anyone else's key. The deployment ships a strict Content-Security-Policy (`netlify.toml`, `vercel.json`, `_headers`, `server.js`) so the browser refuses to send anything to any other domain.
 
-- **Server mode (recommended for sharing):** your API key lives in the host's environment variables and never reaches the browser. Set `ANTHROPIC_API_KEY` and `APP_PASSWORD` (a password you make up, so nobody else can spend your credit). Then enter that password in **Ajustes**.
-- **Direct key mode (no server):** paste your API key in **Ajustes → Clave directa**. The key is stored only in your browser or app. Great for personal use; don't share that browser.
+Limits that protect you:
+- **Spending limit on the key itself:** in the Anthropic Console set **Settings → Limits** (monthly limit). Ideally create a separate Workspace for Knowly with its own limit. This is the only limit that truly caps a key.
+- **Daily limit inside the app:** **Ajustes → Límite diario** (300 thousand / 1 million / 3 million tokens per day, per device). When reached, Knowly stops calling the AI until tomorrow.
+- **Per-request cap:** no single request can ask for more than 16,000 output tokens.
+
+Optional, for **private** servers only: **Servidor con contraseña**. If you set `ANTHROPIC_API_KEY` and `APP_PASSWORD` as environment variables, visitors who know the password use *your* key through `/api/ai`. Never do this on a site you share publicly without the password.
 
 Everything uses the same `/api/ai` endpoint, so the app doesn't care which host you pick.
 
@@ -76,26 +80,27 @@ Download the latest `.dmg` (Mac), `.exe` (Windows) or `.AppImage` (Linux) from t
 
 ### Netlify
 
-Press the **Deploy to Netlify** button at the top (or **Add new site → Import from Git**). Set `ANTHROPIC_API_KEY` and `APP_PASSWORD` when asked. The proxy is `netlify/edge-functions/ai.js`.
+Press the **Deploy to Netlify** button at the top (or **Add new site → Import from Git**). No environment variables are needed. Open the site, go to **Ajustes** and paste your key. The optional private-server proxy is `netlify/edge-functions/ai.js`.
 
 > Dragging the folder into *Netlify Drop* does not work, because the AI function would not be published.
 
 ### Vercel
 
-**Add New → Project → Import** this repo. Leave the build settings empty (framework "Other") and add `ANTHROPIC_API_KEY` and `APP_PASSWORD` under **Environment Variables**. The proxy is `api/ai.js`.
+**Add New → Project → Import** this repo. Leave the build settings empty (framework "Other"). No environment variables are needed. The optional private-server proxy is `api/ai.js`.
 
 ### Cloudflare Pages
 
-**Workers & Pages → Create → Pages → Connect to Git.** Leave the build command empty and set the output directory to `/`. Add `ANTHROPIC_API_KEY` and `APP_PASSWORD` under **Settings → Variables and Secrets**. The proxy is `functions/api/ai.js`.
+**Workers & Pages → Create → Pages → Connect to Git.** Leave the build command empty and set the output directory to `/`. No environment variables are needed. The optional private-server proxy is `functions/api/ai.js`.
 
 ### Any Node host (Render, Railway, VPS, Docker…)
 
 ```bash
 git clone https://github.com/loystudio-tech/Knowly.git && cd Knowly
-ANTHROPIC_API_KEY=sk-ant-... APP_PASSWORD=your-password node server.js
+node server.js          # public: everyone pastes their own key in the app
+# private: ANTHROPIC_API_KEY=sk-ant-... APP_PASSWORD=your-password node server.js
 ```
 
-Needs Node 18+. On Render or Railway, use `npm start` as the start command and add the two variables. Optional: `PORT` (default 8787).
+Needs Node 18+. On Render or Railway, use `npm start` as the start command. Optional: `PORT` (default 8787); the two variables only for a private server.
 
 ### Netlify from the terminal
 
@@ -105,8 +110,6 @@ git clone https://github.com/loystudio-tech/Knowly.git && cd Knowly
 netlify login
 netlify sites:create --name knowly-yourname
 netlify link --name knowly-yourname
-netlify env:set ANTHROPIC_API_KEY "sk-ant-..."
-netlify env:set APP_PASSWORD "your-password"
 netlify deploy --prod
 ```
 
@@ -123,7 +126,7 @@ To test locally with the AI function: copy `.env.example` to `.env`, fill it in 
 
 - **No real e-mail.** Knowly has no backend that sends mail. Reminders are an in-app bell, browser notifications (while the app is open), **.ics files whose alarms your calendar app fires even when Knowly is closed**, and a "send me an e-mail" button that opens your mail app (`mailto:`).
 - **Audio is not heard.** Claude reads images and text, not sound. Videos are analysed as frames (slides, whiteboard); for the spoken part upload the subtitles (`.srt` / `.vtt`) or paste the transcript. Audio files are not supported.
-- **YouTube, Drive and web pages** are fetched by the server endpoint `/api/source` (so it needs server mode on Netlify, Vercel, Cloudflare or Node — not the desktop app, direct-key mode or a bare `index.html`; there you can still upload files, video, paste text or transcripts). YouTube may block server addresses, in which case the app tells you and you can paste the transcript instead. Drive only works for files shared with "anyone with the link".
+- **YouTube, Drive and web pages** are fetched by the server endpoint `/api/source` (so it needs to be hosted on Netlify, Vercel, Cloudflare or Node — not the desktop app or a bare `index.html`; there you can still upload files, video, paste text or transcripts). The endpoint holds no secrets; if you set `APP_PASSWORD` it becomes required. YouTube may block server addresses, in which case the app tells you and you can paste the transcript instead. Drive only works for files shared with "anyone with the link".
 - **Voices** are the ones your device provides (you can pick one per language in Settings). There are no paid neural voices.
 - Alarms in the `.ics` and the in-app bell need you to open the calendar file or the app at least once.
 
@@ -133,7 +136,7 @@ To test locally with the AI function: copy `.env.example` to `.env`, fill it in 
 - Files are sent to the Anthropic API only when you ask the AI to do something.
 - To move to another device: **Ajustes → Exportar** (Export), then **Importar** (Import) on the other device.
 - No analytics and no tracking.
-- Your API key is never stored in this repo. It lives in your host's environment variables or, in direct mode, only in your own browser or app.
+- Your API key is never stored in this repo or on the host. It lives only in your own browser or app (localStorage), is never included in backups/exports, and you can remove it any time in **Ajustes**.
 
 ## Cost
 

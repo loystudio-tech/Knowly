@@ -13,9 +13,9 @@ const json = (obj, status) => new Response(JSON.stringify(obj), { status, header
 
 export default async (req) => {
   if (req.method !== 'POST') return json({ error: { message: 'Método no permitido' } }, 405);
-  const password = Netlify.env.get('APP_PASSWORD');
-  if (!password) return json({ error: { message: 'Falta APP_PASSWORD en las variables de entorno de Netlify.' } }, 500);
-  if (req.headers.get('x-app-password') !== password) return json({ error: { message: 'Contraseña incorrecta' } }, 401);
+  if (req.headers.get('sec-fetch-site') === 'cross-site') return json({ error: { message: 'No permitido' } }, 403);
+  const password = Netlify.env.get('APP_PASSWORD');      // optional: if set, it is required
+  if (password && req.headers.get('x-app-password') !== password) return json({ error: { message: 'Contraseña incorrecta' } }, 401);
   let body; try { body = await req.json(); } catch (e) { return json({ error: { message: 'Petición no válida' } }, 400); }
   return sourceResponse(body);
 };

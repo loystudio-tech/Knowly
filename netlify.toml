@@ -1,13 +1,14 @@
 [build]
   publish = "."
 
+# No environment variables are needed: every person pastes their own Anthropic API key in the app (Ajustes).
+# It stays in their browser and is sent only to api.anthropic.com. The Content-Security-Policy below makes
+# the browser refuse to send anything anywhere else, so even a bug could not leak a key to another site.
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
     Referrer-Policy = "no-referrer"
-
-# The "Deploy to Netlify" button asks for these variables when deploying.
-[template.environment]
-  ANTHROPIC_API_KEY = "Your Anthropic API key (console.anthropic.com/settings/keys)"
-  APP_PASSWORD = "A password you choose: you will enter it in the app Settings (Ajustes)"
+    X-Content-Type-Options = "nosniff"
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com; worker-src 'self'; manifest-src 'self'; object-src 'self' blob:; frame-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
