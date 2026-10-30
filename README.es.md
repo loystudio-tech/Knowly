@@ -56,6 +56,8 @@ Knowly funciona **en cualquier sitio**: como app de escritorio, en el navegador 
 Límites que te protegen:
 - **Límite de gasto en la propia clave:** en la Console de Anthropic pon **Settings → Limits** (límite mensual). Lo ideal es crear un Workspace aparte para Knowly con su propio límite. Es el único límite que de verdad frena una clave.
 - **Límite diario dentro de la app:** **Ajustes → Límite diario** (300 mil / 1 millón / 3 millones de tokens al día, por dispositivo). Al llegar, Knowly deja de llamar a la IA hasta mañana.
+- **Límite mensual, ritmo de peticiones y automatizaciones:** también en Ajustes (5 / 15 / 50 millones de tokens al mes; por defecto 15 M), más un tope fijo de 60 peticiones a la IA por minuto y 30 automatizaciones al día. Son por navegador: protegen de accidentes, no de alguien que tenga tu clave.
+- **Solo tu web:** la página carga todos sus scripts desde su propio dominio (sin CDN de terceros) y una Content-Security-Policy estricta solo permite conectar con la propia web y con `api.anthropic.com`. El proxy privado opcional rechaza peticiones cuyo `Origin` sea otra web. Ojo: una clave de Anthropic no se puede atar a un dominio; por eso cada visitante usa la suya.
 - **Tope por petición:** ninguna petición puede pedir más de 16.000 tokens de salida.
 
 Opcional, solo para servidores **privados**: **Servidor con contraseña**. Si pones `ANTHROPIC_API_KEY` y `APP_PASSWORD` como variables de entorno, quien sepa la contraseña usa *tu* clave a través de `/api/ai`. No lo hagas en una web que compartas públicamente sin la contraseña.

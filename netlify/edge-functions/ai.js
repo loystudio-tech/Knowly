@@ -12,6 +12,9 @@ const json = (obj, status) =>
 export default async (req) => {
   if (req.method !== 'POST') return json({ error: { message: 'Método no permitido' } }, 405);
 
+  // Only this site may use the proxy: browsers always send Origin on POST, and it must match this host.
+  const origin = req.headers.get('origin');
+  if (origin) { let ok = false; try { ok = new URL(origin).host === new URL(req.url).host; } catch (e) {} if (!ok) return json({ error: { message: 'Origen no permitido' } }, 403); }
   const password = Netlify.env.get('APP_PASSWORD');
   if (!password) return json({ error: { message: 'Falta APP_PASSWORD en las variables de entorno de Netlify.' } }, 500);
   if (req.headers.get('x-app-password') !== password) return json({ error: { message: 'Contraseña incorrecta' } }, 401);

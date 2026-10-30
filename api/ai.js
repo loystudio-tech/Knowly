@@ -9,6 +9,9 @@ const json = (obj, status) => new Response(JSON.stringify(obj), { status, header
 
 export default async function handler(req) {
   if (req.method !== 'POST') return json({ error: { message: 'Método no permitido' } }, 405);
+  // Only this site may use the proxy: browsers always send Origin on POST, and it must match this host.
+  const origin = req.headers.get('origin');
+  if (origin) { let ok = false; try { ok = new URL(origin).host === new URL(req.url).host; } catch (e) {} if (!ok) return json({ error: { message: 'Origen no permitido' } }, 403); }
   const password = process.env.APP_PASSWORD;
   if (!password) return json({ error: { message: 'Falta APP_PASSWORD en las variables de entorno de Vercel.' } }, 500);
   if (req.headers.get('x-app-password') !== password) return json({ error: { message: 'Contraseña incorrecta' } }, 401);

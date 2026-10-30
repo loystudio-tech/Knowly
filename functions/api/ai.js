@@ -7,6 +7,9 @@ const json = (obj, status) => new Response(JSON.stringify(obj), { status, header
 
 export async function onRequest({ request: req, env }) {
   if (req.method !== 'POST') return json({ error: { message: 'Método no permitido' } }, 405);
+  // Only this site may use the proxy: browsers always send Origin on POST, and it must match this host.
+  const origin = req.headers.get('origin');
+  if (origin) { let ok = false; try { ok = new URL(origin).host === new URL(req.url).host; } catch (e) {} if (!ok) return json({ error: { message: 'Origen no permitido' } }, 403); }
   if (!env.APP_PASSWORD) return json({ error: { message: 'Falta APP_PASSWORD en las variables de Cloudflare.' } }, 500);
   if (req.headers.get('x-app-password') !== env.APP_PASSWORD) return json({ error: { message: 'Contraseña incorrecta' } }, 401);
   if (!env.ANTHROPIC_API_KEY) return json({ error: { message: 'Falta ANTHROPIC_API_KEY en las variables de Cloudflare.' } }, 500);

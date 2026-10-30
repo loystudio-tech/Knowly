@@ -58,6 +58,8 @@ Knowly runs **anywhere**: as a desktop app, in your browser, or on any host. You
 Limits that protect you:
 - **Spending limit on the key itself:** in the Anthropic Console set **Settings → Limits** (monthly limit). Ideally create a separate Workspace for Knowly with its own limit. This is the only limit that truly caps a key.
 - **Daily limit inside the app:** **Ajustes → Límite diario** (300 thousand / 1 million / 3 million tokens per day, per device). When reached, Knowly stops calling the AI until tomorrow.
+- **Monthly limit, request rate and automations:** also in Settings (5 / 15 / 50 million tokens per month by default 15 M), plus a fixed cap of 60 AI requests per minute and 30 automation runs per day. These are per browser; they protect against accidents, not against someone who has your key.
+- **Only your own site:** the page loads all its scripts from its own host (no third-party CDN), and a strict Content-Security-Policy only allows connections to the site itself and `api.anthropic.com`. The optional private proxy rejects requests whose `Origin` is a different site. Note: an Anthropic key cannot be locked to a domain; that is why each visitor uses their own.
 - **Per-request cap:** no single request can ask for more than 16,000 output tokens.
 
 Optional, for **private** servers only: **Servidor con contraseña**. If you set `ANTHROPIC_API_KEY` and `APP_PASSWORD` as environment variables, visitors who know the password use *your* key through `/api/ai`. Never do this on a site you share publicly without the password.

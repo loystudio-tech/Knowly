@@ -22,7 +22,14 @@ const FILES = {
   '/icons/icon-512.png': ['icons/icon-512.png', 'image/png'],
   '/icons/icon-maskable-512.png': ['icons/icon-maskable-512.png', 'image/png'],
   '/icons/apple-touch-icon.png': ['icons/apple-touch-icon.png', 'image/png'],
+  '/vendor/marked.min.js': ['vendor/marked.min.js', 'text/javascript'],
+  '/vendor/katex.min.js': ['vendor/katex.min.js', 'text/javascript'],
+  '/vendor/purify.min.js': ['vendor/purify.min.js', 'text/javascript'],
+  '/vendor/katex.min.css': ['vendor/katex.min.css', 'text/css'],
 };
+// KaTeX fonts (fixed list, same idea: nothing else in the repo is public).
+for (const n of ['AMS-Regular','Caligraphic-Bold','Caligraphic-Regular','Fraktur-Bold','Fraktur-Regular','Main-Bold','Main-BoldItalic','Main-Italic','Main-Regular','Math-BoldItalic','Math-Italic','SansSerif-Bold','SansSerif-Italic','SansSerif-Regular','Script-Regular','Size1-Regular','Size2-Regular','Size3-Regular','Size4-Regular','Typewriter-Regular'])
+  FILES['/vendor/fonts/KaTeX_' + n + '.woff2'] = ['vendor/fonts/KaTeX_' + n + '.woff2', 'font/woff2'];
 // Self-hosted extra guard: resolve the host and refuse private addresses (DNS rebinding / internal names).
 const privateIP = (ip) => /^(10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|::1|fc|fd|fe80)/i.test(ip);
 const assertHost = async (host) => {
@@ -36,7 +43,7 @@ const SECURITY_HEADERS = {
   "Referrer-Policy": "no-referrer",
   "X-Content-Type-Options": "nosniff",
   "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
-  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com; worker-src 'self'; manifest-src 'self'; object-src 'self' blob:; frame-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com; worker-src 'self'; manifest-src 'self'; object-src 'self' blob:; frame-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
 };
 const send = (res, status, obj) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
 
@@ -44,6 +51,8 @@ createServer(async (req, res) => {
   const path = new URL(req.url, 'http://x').pathname;
   if (path === '/api/ai') {
     if (req.method !== 'POST') return send(res, 405, { error: { message: 'Método no permitido' } });
+    // Only this site may use the proxy (browsers always send Origin on POST).
+    if (req.headers.origin) { let ok = false; try { ok = new URL(req.headers.origin).host === req.headers.host; } catch (e) {} if (!ok) return send(res, 403, { error: { message: 'Origen no permitido' } }); }
     const { APP_PASSWORD: pw, ANTHROPIC_API_KEY: key } = process.env;
     if (!pw || !key) return send(res, 500, { error: { message: 'Faltan ANTHROPIC_API_KEY o APP_PASSWORD en el servidor.' } });
     if (req.headers['x-app-password'] !== pw) return send(res, 401, { error: { message: 'Contraseña incorrecta' } });
